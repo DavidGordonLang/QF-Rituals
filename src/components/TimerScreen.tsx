@@ -98,24 +98,36 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     t < 8 ? "Hold"   :
             "Exhale";
 
-  // Two-layer crossfade: we keep text in both layers and toggle their visibility
-  const [topText, setTopText]     = React.useState(computedPhase);
+  // Two-layer crossfade state
+  const [topText, setTopText]       = React.useState(computedPhase);
   const [bottomText, setBottomText] = React.useState<string | null>(null);
-  const [showTop, setShowTop]     = React.useState(true);   // which layer is currently visible
+  const [showTop, setShowTop]       = React.useState(true);
 
+  // When leaving a breath section, reset all text state so nothing lingers.
+  const prevIsBreath = React.useRef(isBreath);
   React.useEffect(() => {
+    if (!isBreath && prevIsBreath.current) {
+      setTopText("Inhale");
+      setBottomText(null);
+      setShowTop(true);
+    }
+    prevIsBreath.current = isBreath;
+  }, [isBreath]);
+
+  // Only update/cross-fade the labels during breath
+  React.useEffect(() => {
+    if (!isBreath) return;
+
     if (computedPhase === (showTop ? topText : bottomText)) return;
 
     // Put the new text on the hidden layer
     if (showTop) setBottomText(computedPhase);
     else         setTopText(computedPhase);
 
-    // Allow the browser to apply the text before toggling visibility
-    const id = setTimeout(() => {
-      setShowTop(!showTop); // triggers the 500ms CSS transition on both layers
-    }, 20);
+    // Toggle visibility after the new text is mounted
+    const id = setTimeout(() => setShowTop(!showTop), 20);
     return () => clearTimeout(id);
-  }, [computedPhase, showTop, topText, bottomText]);
+  }, [isBreath, computedPhase, showTop, topText, bottomText]);
 
   // Complete → (optional) note → save → return to home
   const promptJournalAndExit = () => {
@@ -163,30 +175,32 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
             <div className={`absolute inset-0 rounded-full breath-halo ${isBreath ? "breath-anim" : ""}`} />
           </div>
 
-          {/* Breathing instruction – true two-layer cross-fade */}
-          <div className={`absolute inset-0 flex items-center justify-center z-10 ${isBreath ? "" : "pointer-events-none"}`}>
-            {/* Top layer */}
-            <span
-              className={`phase-layer text-lg font-semibold drop-shadow-sm
-                         ${showTop ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"}`}
-              style={{ transitionDelay: showTop ? "80ms" : "0ms" }}
-            >
-              {topText}
-            </span>
-            {/* Bottom layer */}
-            {bottomText !== null && (
+          {/* Breathing instruction – ONLY render during breath */}
+          {isBreath && (
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              {/* Top layer */}
               <span
                 className={`phase-layer text-lg font-semibold drop-shadow-sm
-                           ${showTop ? "opacity-0 -translate-y-1" : "opacity-100 translate-y-0"}`}
-                style={{ transitionDelay: !showTop ? "80ms" : "0ms" }}
+                           ${showTop ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"}`}
+                style={{ transitionDelay: showTop ? "80ms" : "0ms" }}
               >
-                {bottomText}
+                {topText}
               </span>
-            )}
-          </div>
+              {/* Bottom layer */}
+              {bottomText !== null && (
+                <span
+                  className={`phase-layer text-lg font-semibold drop-shadow-sm
+                             ${showTop ? "opacity-0 -translate-y-1" : "opacity-100 translate-y-0"}`}
+                  style={{ transitionDelay: !showTop ? "80ms" : "0ms" }}
+                >
+                  {bottomText}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Countdown time: slower glide to top-right during breath, back to centre otherwise */}
+        {/* Countdown time: glide up only during breath */}
         <div
           className={`absolute z-10 transition-all duration-1200 ease-out
                       ${isBreath
