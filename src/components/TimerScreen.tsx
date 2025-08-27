@@ -154,10 +154,8 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
 };
 
 function chooseBreathAnimation() {
-  // 14-second cycle: 4 in, 4 hold, 6 out
-  // we chain keyframes with steps timing via CSS animations
-  // Here we approximate by repeating a 14s composed animation infinitely
-  return "breatheIn 4s ease-in forwards, breatheHold 4s 4s linear forwards, breatheOut 6s 8s ease-out forwards infinite";
+  // smoother loop using the 14s cycle defined in tailwind.css
+  return "breathCycle14 14s linear infinite";
 }
 
 function formatTime(s: number) {
