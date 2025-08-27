@@ -92,65 +92,79 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     setJournal([entry, ...journal]);
   };
 
-  // Visual constants to match the older layout
+  // Visual constants to match old layout closely
   const ringSize = 260;
-  const innerGlowSize = ringSize - 12 * 2 - 16; // ringSize - (stroke*2) - padding → safely inside ring
+  const ringStroke = 12;
+  const pad = 16;
+  const inner = ringSize - ringStroke * 2 - pad; // inner circle where content lives
 
   return (
     <div className="card">
+      {/* Header */}
       <div className="mb-3">
         <div className="text-xs opacity-80">{ritual.guided ? "Guided" : "Instant"}</div>
         <div className="text-xl font-semibold">{ritual.name}</div>
       </div>
 
-      {/* RING + INNER CONTENT (all inside the ring, like the older UI) */}
+      {/* RING + INNER OVERLAY (semi-transparent, blurred, with breath fill inside) */}
       <div className="relative flex flex-col items-center justify-center">
-        <ProgressRing progress={progress} size={ringSize} stroke={12} />
+        <ProgressRing progress={progress} size={ringSize} stroke={ringStroke} />
 
-        {/* Inner soft plate (subtle vignette) */}
+        {/* Inner container clipped to the ring's inner diameter */}
         <div
-          className="absolute rounded-full"
-          style={{
-            width: innerGlowSize,
-            height: innerGlowSize,
-            background: "radial-gradient( circle at 50% 45%, rgba(255,255,255,0.18), rgba(255,255,255,0.06) 60%, rgba(0,0,0,0.0) 100% )",
-            boxShadow: "inset 0 0 24px rgba(0,0,0,0.35)"
-          }}
+          className="absolute rounded-full overflow-hidden"
+          style={{ width: inner, height: inner }}
           aria-hidden
-        />
+        >
+          {/* Subtle vignette plate to create the semi-transparent look */}
+          <div
+            className="w-full h-full"
+            style={{
+              background:
+                "radial-gradient(circle at 50% 45%, rgba(255,255,255,0.16), rgba(255,255,255,0.06) 60%, rgba(0,0,0,0) 100%)",
+              boxShadow: "inset 0 0 24px rgba(0,0,0,0.35), inset 0 0 120px rgba(0,0,0,0.25)"
+            }}
+          />
 
-        {/* Breathing glow — clipped by inner size so it stays *inside* the ring */}
-        <div
-          className="absolute rounded-full breath-glow"
-          style={{
-            width: innerGlowSize - 10,
-            height: innerGlowSize - 10,
-            background: "radial-gradient(circle, rgba(255,255,255,0.14), rgba(255,255,255,0.02) 70%, rgba(0,0,0,0) 75%)",
-            animation: current.kind === "breath" ? "breathCycle14 14s linear infinite" : "none"
-          }}
-          aria-hidden
-        />
+          {/* BREATH FILL — starts as a dot, expands to fill, holds, contracts (4–4–6) */}
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{
+              width: inner,
+              height: inner,
+              background:
+                "radial-gradient(circle, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.12) 45%, rgba(255,255,255,0.02) 70%, rgba(0,0,0,0) 75%)",
+              transformOrigin: "center",
+              animation: current.kind === "breath" ? "breathFill14 14s ease-in-out infinite" : "none",
+              mixBlendMode: "screen"
+            }}
+          />
+        </div>
 
-        {/* Text stack inside ring */}
-        <div className="absolute flex flex-col items-center text-center leading-tight">
+        {/* Time inside the ring */}
+        <div className="absolute text-center">
           <div className="text-5xl font-semibold tabular-nums drop-shadow-sm">{formatTime(remaining)}</div>
-          <div className="mt-2 text-sm">
-            Now: <span className="font-semibold">{current.label}</span>
-          </div>
-          <div className="mt-1 text-[13px] text-slate-300">
-            {current.kind === "breath"
-              ? "4–4–6 rhythm. Follow the soft glow to pace inhale, hold, exhale."
-              : current.kind === "intention"
-              ? "Set one clear intention for your day."
-              : current.kind === "posture"
-              ? "Stack posture: feet, hips, ribs, head."
-              : "Settle your attention and breathe softly."}
-          </div>
-          <div className="mt-1 text-[12px] opacity-80">Section remaining: {formatTime(sectionRemaining)}</div>
         </div>
       </div>
 
-      {/* Bottom controls (Pause + Exit side by side, like the older layout) */}
+      {/* Below-the-ring text stack (mirrors the old layout) */}
+      <div className="mt-3 text-center">
+        <div className="text-base">
+          Now: <span className="font-semibold">{current.label}</span>
+        </div>
+        <div className="mt-1 text-[13px] text-slate-300">
+          {current.kind === "breath"
+            ? "4–4–6 rhythm. Follow the soft glow to pace inhale, hold, exhale."
+            : current.kind === "intention"
+            ? "Set one clear intention for your day."
+            : current.kind === "posture"
+            ? "Stack posture: feet, hips, ribs, head."
+            : "Settle your attention and breathe softly."}
+        </div>
+        <div className="mt-1 text-[12px] opacity-80">Section remaining: {formatTime(sectionRemaining)}</div>
+      </div>
+
+      {/* Bottom controls */}
       <div className="mt-6 flex justify-center gap-2">
         {!running ? (
           <button className="btn" onClick={start}>Start</button>
