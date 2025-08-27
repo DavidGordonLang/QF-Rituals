@@ -38,9 +38,9 @@
 }
 .fade-in { animation: qfFadeIn 0.5s ease-out both; }
 
-/* Phase text layers (cross-fade via transitions, not keyframes) */
+/* Phase text layers (cross-fade via transitions) */
 .phase-layer {
-  @apply absolute transition-all duration-500 ease-out will-change-[opacity,transform];
+  @apply absolute transition-all duration-[800ms] ease-in-out will-change-[opacity,transform];
 }
 
 /* Breathing animation (scale only to remain centred) */
