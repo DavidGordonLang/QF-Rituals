@@ -98,6 +98,8 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const innerPad = 16;
   const inner = ringSize - ringStroke * 2 - innerPad; // inner disc area
 
+  const isBreath = current.kind === "breath";
+
   return (
     <div className="card">
       {/* Header */}
@@ -122,7 +124,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
           }}
           aria-hidden
         >
-          {/* Centre-balanced glass plate (no top bias) */}
+          {/* Centre-balanced glass plate */}
           <div
             className="w-full h-full"
             style={{
@@ -132,27 +134,20 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
             }}
           />
 
-          {/* BREATH CORE (pinpoint → full → hold → pinpoint) */}
+          {/* BREATH WRAP: handles centering via translate; children animate ONLY scale */}
           <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full breath-core"
-            style={{
-              width: inner,
-              height: inner,
-              animation: current.kind === "breath" ? "breathFill14 14s ease-in-out infinite" : "none",
-              zIndex: 2
-            }}
-          />
-
-          {/* BREATH HALO (feathered aura, bolder) */}
-          <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full breath-halo"
-            style={{
-              width: inner,
-              height: inner,
-              animation: current.kind === "breath" ? "breathFill14 14s ease-in-out infinite" : "none",
-              zIndex: 1
-            }}
-          />
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+            style={{ width: inner, height: inner, pointerEvents: "none" }}
+          >
+            {/* CORE */}
+            <div
+              className={`absolute inset-0 rounded-full breath-core ${isBreath ? "breath-anim" : ""}`}
+            />
+            {/* HALO */}
+            <div
+              className={`absolute inset-0 rounded-full breath-halo ${isBreath ? "breath-anim" : ""}`}
+            />
+          </div>
         </div>
 
         {/* Time (above the layers) */}
