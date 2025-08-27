@@ -11,34 +11,29 @@
 
 /* --- Components --- */
 @layer components {
-  .card {
-    @apply rounded-2xl bg-white/10 backdrop-blur-2xl p-4 shadow-soft border border-white/10;
-  }
-  .btn {
-    @apply px-4 py-2 rounded-xl border border-white/10 hover:border-white/20 transition;
-  }
-  .tab { @apply flex-1 text-center py-2 rounded-xl border border-white/10; }
+  .card { @apply rounded-2xl bg-white/10 backdrop-blur-2xl p-4 shadow-soft border border-white/10; }
+  .btn  { @apply px-4 py-2 rounded-xl border border-white/10 hover:border-white/20 transition; }
+  .tab  { @apply flex-1 text-center py-2 rounded-xl border border-white/10; }
   .tab-active { @apply bg-white/10; }
 }
 
 /* --- Breathing animation (4–4–6) --- */
-/* Scale from pinpoint (0.02) to full (1.00), hold, then back. */
+/* Pinpoint (0.02) -> Full (1.00) -> Hold -> Pinpoint (14s) */
 @keyframes breathFill14 {
-  0%        { transform: scale(0.02); opacity: .25; }
-  28.571%   { transform: scale(1.00); opacity: .45; } /* end inhale (4s) */
-  57.142%   { transform: scale(1.00); opacity: .45; } /* end hold (8s) */
-  100%      { transform: scale(0.02); opacity: .25; } /* end exhale (14s) */
+  0%        { transform: scale(0.02); opacity: .35; }
+  28.571%   { transform: scale(1.00); opacity: .55; } /* end inhale (4s) */
+  57.142%   { transform: scale(1.00); opacity: .55; } /* end hold (8s)   */
+  100%      { transform: scale(0.02); opacity: .35; } /* end exhale (14s)*/
 }
 
-/* Visual layers for the breath cue */
+/* Breath visuals */
 .breath-core {
-  /* crisp bright centre with soft falloff */
   background: radial-gradient(
-    circle,
-    rgba(255,255,255,0.55) 0%,
-    rgba(255,255,255,0.35) 35%,
-    rgba(255,255,255,0.10) 65%,
-    rgba(0,0,0,0.00) 75%
+    circle at 50% 50%,
+    rgba(255,255,255,0.70) 0%,
+    rgba(255,255,255,0.48) 36%,
+    rgba(255,255,255,0.14) 68%,
+    rgba(0,0,0,0.00) 76%
   );
   mix-blend-mode: screen;
   transform-origin: center;
@@ -46,20 +41,19 @@
 }
 
 .breath-halo {
-  /* wider, feathered aura to make it obvious but gentle */
   background: radial-gradient(
-    circle,
-    rgba(255,255,255,0.22) 0%,
-    rgba(255,255,255,0.10) 45%,
-    rgba(255,255,255,0.02) 70%,
-    rgba(0,0,0,0.00) 78%
+    circle at 50% 50%,
+    rgba(255,255,255,0.28) 0%,
+    rgba(255,255,255,0.16) 44%,
+    rgba(255,255,255,0.04) 70%,
+    rgba(0,0,0,0.00) 80%
   );
-  filter: blur(28px);
+  filter: blur(36px);
   mix-blend-mode: screen;
   transform-origin: center;
   will-change: transform, opacity;
 }
 
-/* Typography helpers */
+/* Type helpers */
 .h-soft { @apply font-semibold tracking-tight; }
 .subtle { @apply text-slate-300; }
