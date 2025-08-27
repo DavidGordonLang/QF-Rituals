@@ -92,7 +92,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     setJournal([entry, ...journal]);
   };
 
-  /* --- Visual sizing (to match the older comp) --- */
+  /* --- Visual sizing --- */
   const ringSize = 260;
   const ringStroke = 12;
   const innerPad = 16;
@@ -102,18 +102,24 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     <div className="card">
       {/* Header */}
       <div className="mb-3">
-        <div className="text-xs subtle">Guided</div>
-        <div className="text-2xl h-soft">{ritual.name}</div>
+        <div className="text-xs text-slate-300">Guided</div>
+        <div className="text-2xl font-semibold tracking-tight">{ritual.name}</div>
       </div>
 
       {/* Ring + inner animation */}
       <div className="relative flex flex-col items-center justify-center">
         <ProgressRing progress={progress} size={ringSize} stroke={ringStroke} />
 
-        {/* Clip area so visuals stay strictly inside the ring */}
+        {/* CENTRED clip area so visuals stay strictly inside the ring */}
         <div
           className="absolute rounded-full overflow-hidden"
-          style={{ width: inner, height: inner }}
+          style={{
+            width: inner,
+            height: inner,
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)"
+          }}
           aria-hidden
         >
           {/* Subtle glass plate */}
@@ -126,23 +132,32 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
             }}
           />
 
-          {/* BREATH CORE (clear, bright centre) */}
+          {/* BREATH CORE (pinpoint → full → hold → pinpoint) */}
           <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full breath-core"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
             style={{
               width: inner,
               height: inner,
+              background:
+                "radial-gradient(circle, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.35) 35%, rgba(255,255,255,0.10) 65%, rgba(0,0,0,0) 75%)",
+              mixBlendMode: "screen",
+              transformOrigin: "center",
               animation: current.kind === "breath" ? "breathFill14 14s ease-in-out infinite" : "none",
               zIndex: 2
             }}
           />
 
-          {/* BREATH HALO (feathered aura, more obvious) */}
+          {/* BREATH HALO (feathered aura for presence) */}
           <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full breath-halo"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
             style={{
               width: inner,
               height: inner,
+              background:
+                "radial-gradient(circle, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.10) 45%, rgba(255,255,255,0.02) 70%, rgba(0,0,0,0) 78%)",
+              filter: "blur(28px)",
+              mixBlendMode: "screen",
+              transformOrigin: "center",
               animation: current.kind === "breath" ? "breathFill14 14s ease-in-out infinite" : "none",
               zIndex: 1
             }}
@@ -158,7 +173,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
       {/* Copy under the ring */}
       <div className="mt-4 text-center">
         <div className="text-base">Now: <span className="font-semibold">{current.label}</span></div>
-        <div className="mt-1 text-[13px] subtle">
+        <div className="mt-1 text-[13px] text-slate-300">
           {current.kind === "breath"
             ? "4–4–6 rhythm. Follow the soft glow to pace inhale, hold, exhale."
             : current.kind === "intention"
