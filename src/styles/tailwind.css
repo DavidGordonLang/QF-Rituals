@@ -28,12 +28,12 @@
 /* One complete 14s cycle: 4s inhale → 4s hold → 6s exhale (loops) */
 @keyframes breathCycle14 {
   0%        { transform: scale(0.90); opacity: .65; }
-  28.571%   { transform: scale(1.05); opacity: 1; }     /* end inhale (4s) */
-  57.142%   { transform: scale(1.05); opacity: .98; }    /* end hold (8s) */
-  100%      { transform: scale(0.90); opacity: .65; }    /* end exhale (14s) */
+  28.571%   { transform: scale(1.05); opacity: 1; }
+  57.142%   { transform: scale(1.05); opacity: .98; }
+  100%      { transform: scale(0.90); opacity: .65; }
 }
 
-/* Individual phases (kept for flexibility) */
+/* Phase keyframes (kept if we need them later) */
 @keyframes breatheIn   { 0%{transform:scale(0.90);opacity:.6} 100%{transform:scale(1.05);opacity:1} }
 @keyframes breatheHold { 0%{transform:scale(1.05);opacity:1}  100%{transform:scale(1.05);opacity:.95} }
 @keyframes breatheOut  { 0%{transform:scale(1.05);opacity:1}  100%{transform:scale(0.90);opacity:.6} }
