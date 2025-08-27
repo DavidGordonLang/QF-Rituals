@@ -20,11 +20,9 @@ export const JournalList: React.FC = () => {
     if (idx < 0) return;
     const current = journal[idx];
     const next = window.prompt("Edit note:", current.note ?? "") ?? null;
-    if (next === null) return; // user cancelled
+    if (next === null) return;
     const updated: JournalEntry = { ...current, note: next.trim().length ? next : undefined };
-    const copy = [...journal];
-    copy[idx] = updated;
-    setJournal(copy);
+    const copy = [...journal]; copy[idx] = updated; setJournal(copy);
   };
 
   return (
@@ -35,11 +33,8 @@ export const JournalList: React.FC = () => {
             <div>
               <div className="text-xs opacity-80">{new Date(j.endedAt).toLocaleString()}</div>
               <div className="font-medium">{j.ritualName}</div>
-              {j.note ? (
-                <p className="text-sm text-slate-300 mt-1 whitespace-pre-wrap">{j.note}</p>
-              ) : (
-                <p className="text-sm text-slate-400 mt-1">No note.</p>
-              )}
+              {j.note ? <p className="text-sm text-slate-300 mt-1 whitespace-pre-wrap">{j.note}</p> :
+                        <p className="text-sm text-slate-400 mt-1">No note.</p>}
             </div>
             <button className="btn whitespace-nowrap h-8 px-3" onClick={() => editEntry(j.id)}>Edit</button>
           </div>
