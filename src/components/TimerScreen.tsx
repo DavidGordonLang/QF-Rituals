@@ -98,12 +98,12 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     t < 8 ? "Hold"   :
             "Exhale";
 
-  // Two-layer crossfade state
+  // Two-layer crossfade state (only active during breath)
   const [topText, setTopText]       = React.useState(computedPhase);
   const [bottomText, setBottomText] = React.useState<string | null>(null);
   const [showTop, setShowTop]       = React.useState(true);
 
-  // When leaving a breath section, reset all text state so nothing lingers.
+  // Reset phase state when leaving breath so nothing lingers.
   const prevIsBreath = React.useRef(isBreath);
   React.useEffect(() => {
     if (!isBreath && prevIsBreath.current) {
@@ -114,17 +114,13 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     prevIsBreath.current = isBreath;
   }, [isBreath]);
 
-  // Only update/cross-fade the labels during breath
   React.useEffect(() => {
     if (!isBreath) return;
-
     if (computedPhase === (showTop ? topText : bottomText)) return;
 
-    // Put the new text on the hidden layer
     if (showTop) setBottomText(computedPhase);
     else         setTopText(computedPhase);
 
-    // Toggle visibility after the new text is mounted
     const id = setTimeout(() => setShowTop(!showTop), 20);
     return () => clearTimeout(id);
   }, [isBreath, computedPhase, showTop, topText, bottomText]);
@@ -200,14 +196,19 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
           )}
         </div>
 
-        {/* Countdown time: glide up only during breath */}
+        {/* Countdown time: glide up only during breath — with fixed-width box to prevent glyph blips */}
         <div
           className={`absolute z-10 transition-all duration-1200 ease-out
                       ${isBreath
                         ? "top-3 right-4 text-2xl opacity-80"
                         : "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl opacity-100"}`}
         >
-          <div className="font-semibold tabular-nums drop-shadow-sm">{formatTime(remaining)}</div>
+          <div
+            className="font-semibold tabular-nums drop-shadow-sm tracking-[.05em]"
+            style={{ minWidth: "4ch", textAlign: isBreath ? "right" as const : "center" as const }}
+          >
+            {formatTime(remaining)}
+          </div>
         </div>
       </div>
 
