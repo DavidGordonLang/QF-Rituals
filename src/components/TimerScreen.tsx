@@ -13,12 +13,15 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const [running, setRunning] = React.useState(false);
   const [elapsed, setElapsed] = React.useState(0);
   const [journal, setJournal] = useLocalStorage<JournalEntry[]>("qf_journal_v1", []);
+  const [soundEnabled] = useLocalStorage<boolean>("qf_sound_enabled", true);
 
   const rafRef = React.useRef<number | null>(null);
   const startAtRef = React.useRef<number | null>(null);
   const pausedAtRef = React.useRef<number | null>(null);
 
-  const { woodblock, gong } = useAudio();
+  const { woodblock, gong, setEnabled } = useAudio();
+
+  React.useEffect(() => { setEnabled(soundEnabled); }, [soundEnabled, setEnabled]);
 
   const cancel = () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); rafRef.current = null; };
 
@@ -28,8 +31,9 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     const e = Math.min(total, t);
     setElapsed(e);
     if (e >= total) {
-      cancel(); setRunning(false); gong();
-      promptJournalAndExit(); // ← finish, journal, and return home
+      cancel(); setRunning(false);
+      gong();
+      promptJournalAndExit();
       return;
     }
     rafRef.current = requestAnimationFrame(tick);
@@ -39,26 +43,16 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     if (running) return;
     const now = performance.now();
     if (!startAtRef.current) startAtRef.current = now;
-    if (pausedAtRef.current) {
-      const pauseDur = now - pausedAtRef.current;
-      startAtRef.current += pauseDur;
-      pausedAtRef.current = null;
-    }
+    if (pausedAtRef.current) { const pauseDur = now - pausedAtRef.current; startAtRef.current += pauseDur; pausedAtRef.current = null; }
     rafRef.current = requestAnimationFrame(tick);
     setRunning(true);
   };
 
-  const pause = () => {
-    if (!running) return;
-    cancel();
-    pausedAtRef.current = performance.now();
-    setRunning(false);
-  };
-
+  const pause = () => { if (!running) return; cancel(); pausedAtRef.current = performance.now(); setRunning(false); };
   const exit = () => { cancel(); setRunning(false); onExit(); };
   React.useEffect(() => () => cancel(), []);
 
-  /* --- Sections (1/2/2/2) --- */
+  // Sections
   const [sectionIndex, setSectionIndex] = React.useState(0);
   const sectionOffsets = React.useMemo(() => {
     const arr: number[] = []; let acc = 0;
@@ -71,10 +65,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     for (let i = 0; i < ritual.sections.length; i++) {
       if (elapsed < sectionOffsets[i] + ritual.sections[i].seconds) { idx = i; break; }
     }
-    if (idx !== sectionIndex) {
-      if (elapsed > 0) woodblock();
-      setSectionIndex(idx);
-    }
+    if (idx !== sectionIndex) { if (elapsed > 0) woodblock(); setSectionIndex(idx); }
   }, [elapsed, ritual.sections, sectionOffsets, sectionIndex, woodblock]);
 
   const current: Section = ritual.sections[sectionIndex];
@@ -84,82 +75,53 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const remaining = total - elapsed;
   const progress = elapsed / total;
 
-  // Complete → prompt for optional note → save → return to home
+  // Complete → (optional) note → save → return to home
   const promptJournalAndExit = () => {
     const note = window.prompt("Ritual complete. Add a reflection? (optional)") ?? undefined;
     const entry: JournalEntry = {
-      id: `${Date.now()}`,
-      ritualId: ritual.id,
-      ritualName: ritual.name,
-      endedAt: Date.now(),
+      id: `${Date.now()}`, ritualId: ritual.id, ritualName: ritual.name, endedAt: Date.now(),
       note: note && note.trim().length ? note : undefined
     };
     setJournal([entry, ...journal]);
-    // after saving, return to home (ritual list)
     onExit();
   };
 
-  /* --- Visual sizing --- */
+  // Visual sizing
   const ringSize = 260;
   const ringStroke = 12;
   const innerPad = 16;
-  const inner = ringSize - ringStroke * 2 - innerPad; // inner disc area
-
+  const inner = ringSize - ringStroke * 2 - innerPad;
   const isBreath = current.kind === "breath";
 
   return (
     <div className="card">
-      {/* Header */}
       <div className="mb-3">
-        <div className="text-xs text-slate-300">Guided</div>
+        <div className="text-xs text-slate-300">{ritual.guided ? "Guided" : "Instant"}</div>
         <div className="text-2xl font-semibold tracking-tight">{ritual.name}</div>
       </div>
 
-      {/* Ring + inner animation */}
       <div className="relative flex flex-col items-center justify-center">
         <ProgressRing progress={progress} size={ringSize} stroke={ringStroke} />
 
-        {/* EXACTLY CENTRED clip area so visuals stay inside the ring */}
-        <div
-          className="absolute rounded-full overflow-hidden"
-          style={{
-            width: inner,
-            height: inner,
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)"
-          }}
-          aria-hidden
-        >
-          {/* Centre-balanced glass plate */}
-          <div
-            className="w-full h-full"
-            style={{
-              background:
-                "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.14), rgba(255,255,255,0.06) 62%, rgba(0,0,0,0) 100%)",
-              boxShadow: "inset 0 0 26px rgba(0,0,0,0.38), inset 0 0 140px rgba(0,0,0,0.25)"
-            }}
-          />
+        {/* Centred inner disc (clip) */}
+        <div className="absolute rounded-full overflow-hidden"
+             style={{ width: inner, height: inner, top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
+             aria-hidden>
+          <div className="w-full h-full number-plate" />
 
-          {/* BREATH WRAP: keeps children perfectly centred; children animate only scale */}
-          <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-            style={{ width: inner, height: inner, pointerEvents: "none" }}
-          >
-            {/* CORE */}
+          {/* Breath wrapper (translate keeps it centred; children animate scale only) */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+               style={{ width: inner, height: inner, pointerEvents: "none" }}>
             <div className={`absolute inset-0 rounded-full breath-core ${isBreath ? "breath-anim" : ""}`} />
-            {/* HALO */}
             <div className={`absolute inset-0 rounded-full breath-halo ${isBreath ? "breath-anim" : ""}`} />
           </div>
         </div>
 
-        {/* Time (above the layers) */}
         <div className="absolute text-center z-10">
           <div className="text-5xl font-semibold tabular-nums drop-shadow-sm">{formatTime(remaining)}</div>
         </div>
       </div>
 
-      {/* Copy under the ring */}
       <div className="mt-4 text-center">
         <div className="text-base">Now: <span className="font-semibold">{current.label}</span></div>
         <div className="mt-1 text-[13px] text-slate-300">
@@ -174,13 +136,8 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
         <div className="mt-1 text-[12px] opacity-80">Section remaining: {formatTime(sectionRemaining)}</div>
       </div>
 
-      {/* Controls */}
       <div className="mt-6 flex justify-center gap-2">
-        {!running ? (
-          <button className="btn" onClick={start}>Start</button>
-        ) : (
-          <button className="btn" onClick={pause}>Pause</button>
-        )}
+        {!running ? <button className="btn" onClick={start}>Start</button> : <button className="btn" onClick={pause}>Pause</button>}
         <button className="btn" onClick={exit}>Exit</button>
       </div>
     </div>
