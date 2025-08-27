@@ -1,9 +1,10 @@
 import React from "react";
 
-export const ProgressRing: React.FC<{ progress: number; size?: number; stroke?: number }> = ({
+/** Visual-only: teal gradient stroke; sizing API unchanged */
+export const ProgressRing: React.FC<{progress: number; size?: number; stroke?: number}> = ({
   progress,
-  size = 260,         // a touch larger for presence
-  stroke = 12         // slightly thicker, like the older UI
+  size = 260,
+  stroke = 12
 }) => {
   const radius = (size - stroke) / 2;
   const circ = 2 * Math.PI * radius;
@@ -13,9 +14,10 @@ export const ProgressRing: React.FC<{ progress: number; size?: number; stroke?: 
   return (
     <svg width={size} height={size} className="block">
       <defs>
+        {/* teal → ocean gradient to match the new app suite palette */}
         <linearGradient id="qfRingGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="white" stopOpacity="0.85" />
-          <stop offset="100%" stopColor="white" stopOpacity="0.25" />
+          <stop offset="0%" stopColor="#1FA2A6" />
+          <stop offset="100%" stopColor="#2072A6" />
         </linearGradient>
       </defs>
 
@@ -29,7 +31,7 @@ export const ProgressRing: React.FC<{ progress: number; size?: number; stroke?: 
         fill="none"
       />
 
-      {/* Progress */}
+      {/* Progress (teal gradient) */}
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -41,7 +43,7 @@ export const ProgressRing: React.FC<{ progress: number; size?: number; stroke?: 
         style={{
           strokeDasharray: circ,
           strokeDashoffset: offset,
-          transition: "stroke-dashoffset 0s" // rAF drives it; no easing delay
+          transition: "stroke-dashoffset 0s"
         }}
       />
     </svg>
