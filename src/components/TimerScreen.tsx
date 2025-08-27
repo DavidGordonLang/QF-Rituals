@@ -10,7 +10,7 @@ type JournalEntry = { id: string; ritualId: string; ritualName: string; endedAt:
 export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const total = ritual.totalSeconds;
 
-  // Coarse elapsed (seconds) for counters, fine elapsed (float seconds) for phase timing
+  // coarse integer seconds and fine float seconds
   const [elapsed, setElapsed] = React.useState(0);
   const [fineElapsed, setFineElapsed] = React.useState(0);
   const [running, setRunning] = React.useState(false);
@@ -32,7 +32,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     const secsFloat = (now - startAtRef.current) / 1000;
     const secsInt = Math.floor(secsFloat);
 
-    const e = Math.min(total, secsInt);
+    const e  = Math.min(total, secsInt);
     const ef = Math.min(total, secsFloat);
 
     setElapsed(e);
@@ -61,7 +61,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   };
 
   const pause = () => { if (!running) return; cancel(); pausedAtRef.current = performance.now(); setRunning(false); };
-  const exit = () => { cancel(); setRunning(false); onExit(); };
+  const exit  = () => { cancel(); setRunning(false); onExit(); };
   React.useEffect(() => () => cancel(), []);
 
   // Sections
@@ -81,27 +81,41 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   }, [elapsed, ritual.sections, sectionOffsets, sectionIndex, woodblock]);
 
   const current: Section = ritual.sections[sectionIndex];
-  const sectionElapsedInt = elapsed - sectionOffsets[sectionIndex];
-  const sectionElapsedFine = fineElapsed - sectionOffsets[sectionIndex];
-  const sectionRemaining = Math.max(0, current.seconds - sectionElapsedInt);
+  const sectionElapsedInt  = elapsed      - sectionOffsets[sectionIndex];
+  const sectionElapsedFine = fineElapsed  - sectionOffsets[sectionIndex];
+  const sectionRemaining   = Math.max(0, current.seconds - sectionElapsedInt);
 
   const remaining = total - elapsed;
-  const progress = elapsed / total;
+  const progress  = elapsed / total;
 
   // ——— Breathing helpers ———
   const isBreath = current.kind === "breath";
-
-  // Use high-resolution float seconds so each segment feels exactly 4/4/6
   const breathCycle = 14; // 4 + 4 + 6
   const t = ((sectionElapsedFine % breathCycle) + breathCycle) % breathCycle;
-  const nextPhase =
+
+  const computedPhase =
     t < 4 ? "Inhale" :
-    t < 8 ? "Hold" :
+    t < 8 ? "Hold"   :
             "Exhale";
 
-  // Re-mount the text each time the phase changes to trigger the 300ms cross-fade
-  const [phase, setPhase] = React.useState(nextPhase);
-  React.useEffect(() => { if (nextPhase !== phase) setPhase(nextPhase); }, [nextPhase, phase]);
+  // Two-layer crossfade: we keep text in both layers and toggle their visibility
+  const [topText, setTopText]     = React.useState(computedPhase);
+  const [bottomText, setBottomText] = React.useState<string | null>(null);
+  const [showTop, setShowTop]     = React.useState(true);   // which layer is currently visible
+
+  React.useEffect(() => {
+    if (computedPhase === (showTop ? topText : bottomText)) return;
+
+    // Put the new text on the hidden layer
+    if (showTop) setBottomText(computedPhase);
+    else         setTopText(computedPhase);
+
+    // Allow the browser to apply the text before toggling visibility
+    const id = setTimeout(() => {
+      setShowTop(!showTop); // triggers the 500ms CSS transition on both layers
+    }, 20);
+    return () => clearTimeout(id);
+  }, [computedPhase, showTop, topText, bottomText]);
 
   // Complete → (optional) note → save → return to home
   const promptJournalAndExit = () => {
@@ -115,10 +129,10 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   };
 
   // Visual sizing
-  const ringSize = 260;
-  const ringStroke = 12;
-  const innerPad = 16;
-  const inner = ringSize - ringStroke * 2 - innerPad;
+  const ringSize  = 260;
+  const ringStroke= 12;
+  const innerPad  = 16;
+  const inner     = ringSize - ringStroke * 2 - innerPad;
 
   return (
     <div className="card fade-in relative overflow-hidden">
@@ -133,31 +147,48 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
         <ProgressRing progress={progress} size={ringSize} stroke={ringStroke} />
 
         {/* Centred inner disc (clip) */}
-        <div className="absolute rounded-full overflow-hidden"
-             style={{ width: inner, height: inner, top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
-             aria-hidden>
+        <div
+          className="absolute rounded-full overflow-hidden"
+          style={{ width: inner, height: inner, top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
+          aria-hidden
+        >
           <div className="w-full h-full number-plate" />
 
-          {/* Breath wrapper (translate keeps it centred; children animate scale only) */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-               style={{ width: inner, height: inner, pointerEvents: "none" }}>
+          {/* Breath wrapper */}
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+            style={{ width: inner, height: inner, pointerEvents: "none" }}
+          >
             <div className={`absolute inset-0 rounded-full breath-core ${isBreath ? "breath-anim" : ""}`} />
             <div className={`absolute inset-0 rounded-full breath-halo ${isBreath ? "breath-anim" : ""}`} />
           </div>
 
-          {/* Breathing instruction inside the ring (cross-fades) */}
+          {/* Breathing instruction – true two-layer cross-fade */}
           <div className={`absolute inset-0 flex items-center justify-center z-10 ${isBreath ? "" : "pointer-events-none"}`}>
-            {isBreath ? (
-              <span key={phase} className="phase-fade text-lg font-semibold drop-shadow-sm">
-                {phase}
+            {/* Top layer */}
+            <span
+              className={`phase-layer text-lg font-semibold drop-shadow-sm
+                         ${showTop ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"}`}
+              style={{ transitionDelay: showTop ? "80ms" : "0ms" }}
+            >
+              {topText}
+            </span>
+            {/* Bottom layer */}
+            {bottomText !== null && (
+              <span
+                className={`phase-layer text-lg font-semibold drop-shadow-sm
+                           ${showTop ? "opacity-0 -translate-y-1" : "opacity-100 translate-y-0"}`}
+                style={{ transitionDelay: !showTop ? "80ms" : "0ms" }}
+              >
+                {bottomText}
               </span>
-            ) : null}
+            )}
           </div>
         </div>
 
         {/* Countdown time: slower glide to top-right during breath, back to centre otherwise */}
         <div
-          className={`absolute z-10 transition-all duration-1000 ease-out
+          className={`absolute z-10 transition-all duration-1200 ease-out
                       ${isBreath
                         ? "top-3 right-4 text-2xl opacity-80"
                         : "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl opacity-100"}`}
@@ -180,7 +211,9 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
             ? "Stack posture: feet, hips, ribs, head."
             : "Settle your attention and breathe softly."}
         </div>
-        <div className="mt-1 text-[12px] opacity-80">Section remaining: {formatTime(Math.max(0, current.seconds - sectionElapsedInt))}</div>
+        <div className="mt-1 text-[12px] opacity-80">
+          Section remaining: {formatTime(Math.max(0, current.seconds - sectionElapsedInt))}
+        </div>
       </div>
 
       {/* Controls */}
