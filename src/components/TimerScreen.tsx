@@ -54,7 +54,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const exit = () => { cancel(); setRunning(false); onExit(); };
   React.useEffect(() => () => cancel(), []);
 
-  // --- Sections (1/2/2/2) ---
+  /* --- Sections (1/2/2/2) --- */
   const [sectionIndex, setSectionIndex] = React.useState(0);
   const sectionOffsets = React.useMemo(() => {
     const arr: number[] = []; let acc = 0;
@@ -68,7 +68,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
       if (elapsed < sectionOffsets[i] + ritual.sections[i].seconds) { idx = i; break; }
     }
     if (idx !== sectionIndex) {
-      if (elapsed > 0) woodblock(); // chime on transition, not at t0
+      if (elapsed > 0) woodblock();
       setSectionIndex(idx);
     }
   }, [elapsed, ritual.sections, sectionOffsets, sectionIndex, woodblock]);
@@ -92,11 +92,11 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     setJournal([entry, ...journal]);
   };
 
-  // --- Visual constants (match old shot) ---
+  /* --- Visual sizing (to match the older comp) --- */
   const ringSize = 260;
   const ringStroke = 12;
   const innerPad = 16;
-  const inner = ringSize - ringStroke * 2 - innerPad; // inner disc where breathing happens
+  const inner = ringSize - ringStroke * 2 - innerPad; // inner disc area
 
   return (
     <div className="card">
@@ -106,48 +106,56 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
         <div className="text-2xl h-soft">{ritual.name}</div>
       </div>
 
-      {/* Ring + inner breathing disc */}
+      {/* Ring + inner animation */}
       <div className="relative flex flex-col items-center justify-center">
         <ProgressRing progress={progress} size={ringSize} stroke={ringStroke} />
 
-        {/* CLIPPED inner disc so we never spill outside the ring */}
+        {/* Clip area so visuals stay strictly inside the ring */}
         <div
           className="absolute rounded-full overflow-hidden"
           style={{ width: inner, height: inner }}
           aria-hidden
         >
-          {/* semi-transparent plate to achieve the “glass” overlay */}
+          {/* Subtle glass plate */}
           <div
             className="w-full h-full"
             style={{
               background:
-                "radial-gradient(circle at 50% 45%, rgba(255,255,255,0.18), rgba(255,255,255,0.06) 60%, rgba(0,0,0,0) 100%)",
-              boxShadow: "inset 0 0 24px rgba(0,0,0,0.35), inset 0 0 140px rgba(0,0,0,0.28)"
+                "radial-gradient(circle at 50% 45%, rgba(255,255,255,0.16), rgba(255,255,255,0.06) 60%, rgba(0,0,0,0) 100%)",
+              boxShadow: "inset 0 0 24px rgba(0,0,0,0.35), inset 0 0 140px rgba(0,0,0,0.25)"
             }}
           />
 
-          {/* BREATH FILL — Pinpoint → fill → hold → pinpoint (4–4–6) */}
+          {/* BREATH CORE (clear, bright centre) */}
           <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full breath-fill"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full breath-core"
             style={{
               width: inner,
               height: inner,
-              background:
-                "radial-gradient(circle, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.12) 45%, rgba(255,255,255,0.02) 70%, rgba(0,0,0,0) 75%)",
               animation: current.kind === "breath" ? "breathFill14 14s ease-in-out infinite" : "none",
               zIndex: 2
             }}
-            aria-hidden
+          />
+
+          {/* BREATH HALO (feathered aura, more obvious) */}
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full breath-halo"
+            style={{
+              width: inner,
+              height: inner,
+              animation: current.kind === "breath" ? "breathFill14 14s ease-in-out infinite" : "none",
+              zIndex: 1
+            }}
           />
         </div>
 
-        {/* Time sits on top, centred */}
+        {/* Time (above the layers) */}
         <div className="absolute text-center z-10">
           <div className="text-5xl font-semibold tabular-nums drop-shadow-sm">{formatTime(remaining)}</div>
         </div>
       </div>
 
-      {/* Below-ring copy (like the old layout) */}
+      {/* Copy under the ring */}
       <div className="mt-4 text-center">
         <div className="text-base">Now: <span className="font-semibold">{current.label}</span></div>
         <div className="mt-1 text-[13px] subtle">
