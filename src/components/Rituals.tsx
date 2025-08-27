@@ -1,29 +1,21 @@
-import React from "react";
-import { stockRituals, minutesLabel, Ritual } from "../data/stockRituals";
-import { TimerScreen } from "./TimerScreen";
+import * as React from "react";
+import { Ritual } from "../data/stockRituals";
 
-export const Rituals: React.FC = () => {
-  const [active, setActive] = React.useState<Ritual | null>(null);
-
-  if (active) {
-    return <TimerScreen ritual={active} onExit={()=>setActive(null)} />;
-  }
-
+export const Rituals: React.FC<{ rituals: Ritual[]; onStart: (r: Ritual) => void }> = ({
+  rituals,
+  onStart
+}) => {
   return (
     <div className="space-y-3">
-      {stockRituals.map(r => (
-        <button key={r.id} className="card w-full text-left"
-          onClick={()=>setActive(r)}>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-medium">{r.name}</div>
-              <div className="text-xs text-slate-300">
-                Guided · {minutesLabel(r.totalSeconds)}
-              </div>
-            </div>
-            <div className="text-xs opacity-80">Tap to begin</div>
+      {rituals.map((r) => (
+        <div key={r.id} className="card flex items-center justify-between">
+          <div>
+            <div className="text-xs opacity-80">{r.guided ? "Guided" : "Instant"}</div>
+            <div className="text-xl font-semibold">{r.name}</div>
+            {r.description && <div className="text-sm text-slate-300">{r.description}</div>}
           </div>
-        </button>
+          <button className="btn" onClick={() => onStart(r)}>Start</button>
+        </div>
       ))}
     </div>
   );
