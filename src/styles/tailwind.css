@@ -18,16 +18,22 @@
 }
 
 /* --- Breathing animation (4–4–6) --- */
-/* Pinpoint (0.02) -> Full (1.00) -> Hold -> Pinpoint (14s) */
-@keyframes breathFill14 {
+/* Animate ONLY scale; centering is handled by a wrapper so translate isn't overwritten */
+@keyframes breathScale14 {
   0%        { transform: scale(0.02); opacity: .35; }
   28.571%   { transform: scale(1.00); opacity: .55; } /* end inhale (4s) */
   57.142%   { transform: scale(1.00); opacity: .55; } /* end hold (8s)   */
   100%      { transform: scale(0.02); opacity: .35; } /* end exhale (14s)*/
 }
 
-/* Breath visuals */
+.breath-anim {
+  animation: breathScale14 14s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
 .breath-core {
+  /* brighter core with smooth falloff */
   background: radial-gradient(
     circle at 50% 50%,
     rgba(255,255,255,0.70) 0%,
@@ -36,11 +42,10 @@
     rgba(0,0,0,0.00) 76%
   );
   mix-blend-mode: screen;
-  transform-origin: center;
-  will-change: transform, opacity;
 }
 
 .breath-halo {
+  /* wider feathered aura */
   background: radial-gradient(
     circle at 50% 50%,
     rgba(255,255,255,0.28) 0%,
@@ -50,8 +55,6 @@
   );
   filter: blur(36px);
   mix-blend-mode: screen;
-  transform-origin: center;
-  will-change: transform, opacity;
 }
 
 /* Type helpers */
