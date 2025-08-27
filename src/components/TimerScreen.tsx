@@ -54,7 +54,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const exit = () => { cancel(); setRunning(false); onExit(); };
   React.useEffect(() => () => cancel(), []);
 
-  // Sections (1/2/2/2)
+  // --- Sections (1/2/2/2) ---
   const [sectionIndex, setSectionIndex] = React.useState(0);
   const sectionOffsets = React.useMemo(() => {
     const arr: number[] = []; let acc = 0;
@@ -68,7 +68,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
       if (elapsed < sectionOffsets[i] + ritual.sections[i].seconds) { idx = i; break; }
     }
     if (idx !== sectionIndex) {
-      if (elapsed > 0) woodblock(); // chime on transition (not at t0)
+      if (elapsed > 0) woodblock(); // chime on transition, not at t0
       setSectionIndex(idx);
     }
   }, [elapsed, ritual.sections, sectionOffsets, sectionIndex, woodblock]);
@@ -92,67 +92,65 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     setJournal([entry, ...journal]);
   };
 
-  // Visual constants to match old layout closely
+  // --- Visual constants (match old shot) ---
   const ringSize = 260;
   const ringStroke = 12;
-  const pad = 16;
-  const inner = ringSize - ringStroke * 2 - pad; // inner circle where content lives
+  const innerPad = 16;
+  const inner = ringSize - ringStroke * 2 - innerPad; // inner disc where breathing happens
 
   return (
     <div className="card">
       {/* Header */}
       <div className="mb-3">
-        <div className="text-xs opacity-80">{ritual.guided ? "Guided" : "Instant"}</div>
-        <div className="text-xl font-semibold">{ritual.name}</div>
+        <div className="text-xs subtle">Guided</div>
+        <div className="text-2xl h-soft">{ritual.name}</div>
       </div>
 
-      {/* RING + INNER OVERLAY (semi-transparent, blurred, with breath fill inside) */}
+      {/* Ring + inner breathing disc */}
       <div className="relative flex flex-col items-center justify-center">
         <ProgressRing progress={progress} size={ringSize} stroke={ringStroke} />
 
-        {/* Inner container clipped to the ring's inner diameter */}
+        {/* CLIPPED inner disc so we never spill outside the ring */}
         <div
           className="absolute rounded-full overflow-hidden"
           style={{ width: inner, height: inner }}
           aria-hidden
         >
-          {/* Subtle vignette plate to create the semi-transparent look */}
+          {/* semi-transparent plate to achieve the “glass” overlay */}
           <div
             className="w-full h-full"
             style={{
               background:
-                "radial-gradient(circle at 50% 45%, rgba(255,255,255,0.16), rgba(255,255,255,0.06) 60%, rgba(0,0,0,0) 100%)",
-              boxShadow: "inset 0 0 24px rgba(0,0,0,0.35), inset 0 0 120px rgba(0,0,0,0.25)"
+                "radial-gradient(circle at 50% 45%, rgba(255,255,255,0.18), rgba(255,255,255,0.06) 60%, rgba(0,0,0,0) 100%)",
+              boxShadow: "inset 0 0 24px rgba(0,0,0,0.35), inset 0 0 140px rgba(0,0,0,0.28)"
             }}
           />
 
-          {/* BREATH FILL — starts as a dot, expands to fill, holds, contracts (4–4–6) */}
+          {/* BREATH FILL — Pinpoint → fill → hold → pinpoint (4–4–6) */}
           <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full breath-fill"
             style={{
               width: inner,
               height: inner,
               background:
-                "radial-gradient(circle, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.12) 45%, rgba(255,255,255,0.02) 70%, rgba(0,0,0,0) 75%)",
-              transformOrigin: "center",
+                "radial-gradient(circle, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.12) 45%, rgba(255,255,255,0.02) 70%, rgba(0,0,0,0) 75%)",
               animation: current.kind === "breath" ? "breathFill14 14s ease-in-out infinite" : "none",
-              mixBlendMode: "screen"
+              zIndex: 2
             }}
+            aria-hidden
           />
         </div>
 
-        {/* Time inside the ring */}
-        <div className="absolute text-center">
+        {/* Time sits on top, centred */}
+        <div className="absolute text-center z-10">
           <div className="text-5xl font-semibold tabular-nums drop-shadow-sm">{formatTime(remaining)}</div>
         </div>
       </div>
 
-      {/* Below-the-ring text stack (mirrors the old layout) */}
-      <div className="mt-3 text-center">
-        <div className="text-base">
-          Now: <span className="font-semibold">{current.label}</span>
-        </div>
-        <div className="mt-1 text-[13px] text-slate-300">
+      {/* Below-ring copy (like the old layout) */}
+      <div className="mt-4 text-center">
+        <div className="text-base">Now: <span className="font-semibold">{current.label}</span></div>
+        <div className="mt-1 text-[13px] subtle">
           {current.kind === "breath"
             ? "4–4–6 rhythm. Follow the soft glow to pace inhale, hold, exhale."
             : current.kind === "intention"
@@ -164,7 +162,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
         <div className="mt-1 text-[12px] opacity-80">Section remaining: {formatTime(sectionRemaining)}</div>
       </div>
 
-      {/* Bottom controls */}
+      {/* Controls */}
       <div className="mt-6 flex justify-center gap-2">
         {!running ? (
           <button className="btn" onClick={start}>Start</button>
