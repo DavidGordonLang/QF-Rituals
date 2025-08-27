@@ -36,8 +36,5 @@ export const stockRituals: Ritual[] = [
     totalSeconds: 300,
     sections: [{id:"mid",label:"Reset",seconds:300,kind:"settle"}],
     description: "Release tension and recenter halfway through the day."
-  },
-  // (we can add the rest later)
+  }
 ];
-
-export const minutesLabel = (totalSeconds: number) => `${Math.round(totalSeconds/60)} Minutes`;
