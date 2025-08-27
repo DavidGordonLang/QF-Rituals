@@ -8,31 +8,44 @@ export const Rituals: React.FC<{ rituals: Ritual[]; onStart: (r: Ritual) => void
   return (
     <div className="space-y-3">
       {rituals.map((r) => (
-        <div key={r.id} className="card flex items-center justify-between">
-          <div className="min-w-0">
+        <button
+          key={r.id}
+          className="card card-tappable w-full text-left relative"
+          onClick={() => onStart(r)}
+          aria-label={`Start ${r.name} (${formatMinutes(r.totalSeconds)})`}
+        >
+          {/* Duration pill */}
+          {typeof r.totalSeconds === "number" && r.totalSeconds > 0 && (
+            <span className="badge absolute top-3 right-3">{formatMinutes(r.totalSeconds)}</span>
+          )}
+
+          {/* Text content */}
+          <div className="pr-24"> {/* reserve space so text doesn't collide with the badge */}
             <div className="text-xs opacity-80">{r.guided ? "Guided" : "Instant"}</div>
-            <div className="text-xl font-semibold">{r.name}</div>
-
-            {/* Description + duration */}
-            <div className="text-sm text-slate-300">
-              {r.description}
-              {typeof r.totalSeconds === "number" && r.totalSeconds > 0 && (
-                <span className="ml-2 text-slate-200/80">• {formatMinutes(r.totalSeconds)}</span>
-              )}
+            <div className="text-2xl font-semibold tracking-tight leading-snug mt-0.5">
+              {r.name}
             </div>
+            {r.description && (
+              <p
+                className="text-sm text-slate-300 mt-1"
+                style={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden"
+                }}
+              >
+                {r.description}
+              </p>
+            )}
           </div>
-
-          <button className="btn ml-4 shrink-0" onClick={() => onStart(r)}>
-            Start
-          </button>
-        </div>
+        </button>
       ))}
     </div>
   );
 };
 
 function formatMinutes(totalSeconds: number) {
-  const mins = Math.round(totalSeconds / 60);
-  if (mins <= 1) return "1 minute";
-  return `${mins} minutes`;
+  const mins = Math.max(1, Math.round(totalSeconds / 60));
+  return mins === 1 ? "1 min" : `${mins} min`;
 }
