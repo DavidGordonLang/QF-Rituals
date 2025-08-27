@@ -23,27 +23,25 @@
   .card-tappable:focus-visible { @apply outline-none ring-2 ring-white/30; }
 
   /* Duration pill */
-  .badge {
-    @apply inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs
-           bg-white/15 border border-white/15 shadow;
-  }
+  .badge { @apply inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs bg-white/15 border border-white/15 shadow; }
 }
 
-/* ====== Transitions / Animations ====== */
+/* ========= Transitions / Animations ========= */
 
 /* Fade in the timer card when a ritual is selected */
-@keyframes qfFadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+@keyframes qfFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .fade-in { animation: qfFadeIn 0.5s ease-out both; }
+
+/* Cross-fade for breathing words */
+@keyframes phaseFade { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+.phase-fade { animation: phaseFade .3s ease both; }
 
 /* Breathing animation (scale only to remain centred) */
 @keyframes breathScale14 {
-  0%        { transform: scale(0.02); opacity: .35; }
-  28.571%   { transform: scale(1.00); opacity: .55; } /* inhale 4s */
-  57.142%   { transform: scale(1.00); opacity: .55; } /* hold 4s   */
-  100%      { transform: scale(0.02); opacity: .35; } /* exhale 6s */
+  0%        { transform: scale(0.02); opacity: .35; }   /* Inhale starts tiny */
+  28.571%   { transform: scale(1.00); opacity: .55; }   /* Inhale done (4s) */
+  57.142%   { transform: scale(1.00); opacity: .55; }   /* Hold done (8s)   */
+  100%      { transform: scale(0.02); opacity: .35; }   /* Exhale done (14s)*/
 }
 .breath-anim { animation: breathScale14 14s ease-in-out infinite; transform-origin: center; }
 
