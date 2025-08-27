@@ -16,7 +16,7 @@
   .tab  { @apply flex-1 text-center py-2 rounded-xl border border-white/10; }
   .tab-active { @apply bg-white/10; }
 
-  /* Tappable card micro-interaction */
+  /* Tappable card micro-interaction (home list) */
   .card-tappable { @apply transition transform w-full text-left relative; }
   .card-tappable:hover { @apply translate-y-[1px]; }
   .card-tappable:active { @apply translate-y-[2px] scale-[0.997]; }
@@ -29,14 +29,25 @@
   }
 }
 
-/* ====== (existing breathing visuals kept here for timer screen) ====== */
+/* ====== Transitions / Animations ====== */
+
+/* Fade in the timer card when a ritual is selected */
+@keyframes qfFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: qfFadeIn 0.5s ease-out both; }
+
+/* Breathing animation (scale only to remain centred) */
 @keyframes breathScale14 {
   0%        { transform: scale(0.02); opacity: .35; }
-  28.571%   { transform: scale(1.00); opacity: .55; }
-  57.142%   { transform: scale(1.00); opacity: .55; }
-  100%      { transform: scale(0.02); opacity: .35; }
+  28.571%   { transform: scale(1.00); opacity: .55; } /* inhale 4s */
+  57.142%   { transform: scale(1.00); opacity: .55; } /* hold 4s   */
+  100%      { transform: scale(0.02); opacity: .35; } /* exhale 6s */
 }
 .breath-anim { animation: breathScale14 14s ease-in-out infinite; transform-origin: center; }
+
+/* Inner visuals */
 .breath-core{
   background: radial-gradient(circle at 50% 50%,
     rgba(255,255,255,0.70) 0%,
