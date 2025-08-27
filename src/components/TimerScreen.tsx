@@ -27,7 +27,11 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     const t = Math.floor((now - startAtRef.current) / 1000);
     const e = Math.min(total, t);
     setElapsed(e);
-    if (e >= total) { cancel(); setRunning(false); gong(); promptJournal(); return; }
+    if (e >= total) {
+      cancel(); setRunning(false); gong();
+      promptJournalAndExit(); // ← finish, journal, and return home
+      return;
+    }
     rafRef.current = requestAnimationFrame(tick);
   };
 
@@ -80,16 +84,19 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const remaining = total - elapsed;
   const progress = elapsed / total;
 
-  const promptJournal = () => {
-    const note = window.prompt("Ritual complete. Add a reflection? (optional)");
+  // Complete → prompt for optional note → save → return to home
+  const promptJournalAndExit = () => {
+    const note = window.prompt("Ritual complete. Add a reflection? (optional)") ?? undefined;
     const entry: JournalEntry = {
       id: `${Date.now()}`,
       ritualId: ritual.id,
       ritualName: ritual.name,
       endedAt: Date.now(),
-      note: note || undefined
+      note: note && note.trim().length ? note : undefined
     };
     setJournal([entry, ...journal]);
+    // after saving, return to home (ritual list)
+    onExit();
   };
 
   /* --- Visual sizing --- */
@@ -104,8 +111,8 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     <div className="card">
       {/* Header */}
       <div className="mb-3">
-        <div className="text-xs subtle">Guided</div>
-        <div className="text-2xl h-soft">{ritual.name}</div>
+        <div className="text-xs text-slate-300">Guided</div>
+        <div className="text-2xl font-semibold tracking-tight">{ritual.name}</div>
       </div>
 
       {/* Ring + inner animation */}
@@ -134,19 +141,15 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
             }}
           />
 
-          {/* BREATH WRAP: handles centering via translate; children animate ONLY scale */}
+          {/* BREATH WRAP: keeps children perfectly centred; children animate only scale */}
           <div
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
             style={{ width: inner, height: inner, pointerEvents: "none" }}
           >
             {/* CORE */}
-            <div
-              className={`absolute inset-0 rounded-full breath-core ${isBreath ? "breath-anim" : ""}`}
-            />
+            <div className={`absolute inset-0 rounded-full breath-core ${isBreath ? "breath-anim" : ""}`} />
             {/* HALO */}
-            <div
-              className={`absolute inset-0 rounded-full breath-halo ${isBreath ? "breath-anim" : ""}`}
-            />
+            <div className={`absolute inset-0 rounded-full breath-halo ${isBreath ? "breath-anim" : ""}`} />
           </div>
         </div>
 
@@ -159,7 +162,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
       {/* Copy under the ring */}
       <div className="mt-4 text-center">
         <div className="text-base">Now: <span className="font-semibold">{current.label}</span></div>
-        <div className="mt-1 text-[13px] subtle">
+        <div className="mt-1 text-[13px] text-slate-300">
           {current.kind === "breath"
             ? "4–4–6 rhythm. Follow the soft glow to pace inhale, hold, exhale."
             : current.kind === "intention"
