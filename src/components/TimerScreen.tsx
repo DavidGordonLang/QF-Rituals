@@ -20,7 +20,6 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const pausedAtRef = React.useRef<number | null>(null);
 
   const { woodblock, gong, setEnabled } = useAudio();
-
   React.useEffect(() => { setEnabled(soundEnabled); }, [soundEnabled, setEnabled]);
 
   const cancel = () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); rafRef.current = null; };
@@ -43,7 +42,11 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     if (running) return;
     const now = performance.now();
     if (!startAtRef.current) startAtRef.current = now;
-    if (pausedAtRef.current) { const pauseDur = now - pausedAtRef.current; startAtRef.current += pauseDur; pausedAtRef.current = null; }
+    if (pausedAtRef.current) {
+      const pauseDur = now - pausedAtRef.current;
+      startAtRef.current += pauseDur;
+      pausedAtRef.current = null;
+    }
     rafRef.current = requestAnimationFrame(tick);
     setRunning(true);
   };
@@ -75,6 +78,16 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const remaining = total - elapsed;
   const progress = elapsed / total;
 
+  // ——— Breathing helpers ———
+  const isBreath = current.kind === "breath";
+  const breathPhase = React.useMemo(() => {
+    if (!isBreath) return "";
+    const t = sectionElapsed % 14; // 4 in + 4 hold + 6 out
+    if (t < 4) return "Inhale";
+    if (t < 8) return "Hold";
+    return "Exhale";
+  }, [isBreath, sectionElapsed]);
+
   // Complete → (optional) note → save → return to home
   const promptJournalAndExit = () => {
     const note = window.prompt("Ritual complete. Add a reflection? (optional)") ?? undefined;
@@ -91,15 +104,16 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const ringStroke = 12;
   const innerPad = 16;
   const inner = ringSize - ringStroke * 2 - innerPad;
-  const isBreath = current.kind === "breath";
 
   return (
-    <div className="card">
+    <div className="card fade-in relative overflow-hidden">
+      {/* Header */}
       <div className="mb-3">
         <div className="text-xs text-slate-300">{ritual.guided ? "Guided" : "Instant"}</div>
         <div className="text-2xl font-semibold tracking-tight">{ritual.name}</div>
       </div>
 
+      {/* Ring + inner animation */}
       <div className="relative flex flex-col items-center justify-center">
         <ProgressRing progress={progress} size={ringSize} stroke={ringStroke} />
 
@@ -115,15 +129,32 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
             <div className={`absolute inset-0 rounded-full breath-core ${isBreath ? "breath-anim" : ""}`} />
             <div className={`absolute inset-0 rounded-full breath-halo ${isBreath ? "breath-anim" : ""}`} />
           </div>
+
+          {/* Breathing instruction inside the ring */}
+          <div
+            className={`absolute inset-0 flex items-center justify-center z-10
+                        transition-opacity duration-300 ${isBreath ? "opacity-100" : "opacity-0"}`}
+          >
+            <span className="text-lg font-semibold drop-shadow-sm">{breathPhase}</span>
+          </div>
         </div>
 
-        <div className="absolute text-center z-10">
-          <div className="text-5xl font-semibold tabular-nums drop-shadow-sm">{formatTime(remaining)}</div>
+        {/* Countdown time: glides to top-right during breath, back to centre otherwise */}
+        <div
+          className={`absolute z-10 transition-all duration-500 ease-out
+                      ${isBreath
+                        ? "top-3 right-4 text-2xl opacity-80"
+                        : "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl opacity-100"}`}
+        >
+          <div className="font-semibold tabular-nums drop-shadow-sm">{formatTime(remaining)}</div>
         </div>
       </div>
 
+      {/* Copy under the ring */}
       <div className="mt-4 text-center">
-        <div className="text-base">Now: <span className="font-semibold">{current.label}</span></div>
+        <div className="text-base">
+          Now: <span className="font-semibold">{current.label}</span>
+        </div>
         <div className="mt-1 text-[13px] text-slate-300">
           {current.kind === "breath"
             ? "4–4–6 rhythm. Follow the soft glow to pace inhale, hold, exhale."
@@ -136,6 +167,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
         <div className="mt-1 text-[12px] opacity-80">Section remaining: {formatTime(sectionRemaining)}</div>
       </div>
 
+      {/* Controls */}
       <div className="mt-6 flex justify-center gap-2">
         {!running ? <button className="btn" onClick={start}>Start</button> : <button className="btn" onClick={pause}>Pause</button>}
         <button className="btn" onClick={exit}>Exit</button>
