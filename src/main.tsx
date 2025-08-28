@@ -1,9 +1,9 @@
 import React from "react";
-import { createRoot } from "react-dom/client";
-import "./styles/tailwind.css";        // <-- make sure this import exists
-import { App } from "./app/App";
+import ReactDOM from "react-dom/client";
+import App from "./app/App";              // ← default import (App is default export)
+import "./styles/tailwind.css";
 
-createRoot(document.getElementById("root")!).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
