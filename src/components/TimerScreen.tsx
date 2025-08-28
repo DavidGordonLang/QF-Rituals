@@ -148,8 +148,9 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const [bottomText, setBottomText] = React.useState<string | null>(null);
   const [showTop, setShowTop]       = React.useState(true);
 
-  // When we go to a pause (displayPhase=null), fade the last word out slowly (3.2s)
+  // Long fade-to-null controller
   const [fadeOutText, setFadeOutText] = React.useState<string | null>(null);
+  const [fadeOutActive, setFadeOutActive] = React.useState(false);
   const fadeTimeout = React.useRef<number | null>(null);
 
   const prevIsBreath = React.useRef(isBreath);
@@ -162,24 +163,29 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
       setBottomText(null);
       setShowTop(true);
       setFadeOutText(null);
+      setFadeOutActive(false);
       if (fadeTimeout.current) { window.clearTimeout(fadeTimeout.current); fadeTimeout.current = null; }
     }
     prevIsBreath.current = isBreath;
   }, [isBreath]);
 
   React.useEffect(() => {
-    // If now pausing (no label), start a long fade of the previous visible word
+    // If now pausing (no label), mount a visible span and then activate the fade class next frame
     if (!displayPhase) {
       const last = prevDisplay.current;
       if (last) {
         setFadeOutText(last);
+        setFadeOutActive(false);
+        // trigger transition on next frame so it animates
+        requestAnimationFrame(() => setFadeOutActive(true));
         if (fadeTimeout.current) window.clearTimeout(fadeTimeout.current);
         fadeTimeout.current = window.setTimeout(() => {
           setFadeOutText(null);
+          setFadeOutActive(false);
           fadeTimeout.current = null;
         }, 3300); // a hair over 3.2s to ensure completion
       }
-      // also clear layered words so they don't linger
+      // clear layered words
       setTopText(null);
       setBottomText(null);
       setShowTop(true);
@@ -190,7 +196,6 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     // Have a label (Inhale/Hold/Exhale)
     if (prevDisplay.current === displayPhase) return;
 
-    // Swap into hidden layer then flip (1.6s cross-fade handled by CSS)
     if (showTop) setBottomText(displayPhase);
     else         setTopText(displayPhase);
 
@@ -209,8 +214,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
       endedAt: Date.now(),
       note: note && note.trim().length ? note : undefined
     };
-    // Functional update to avoid stale state; ensures persistence
-    setJournal(prev => [entry, ...prev]);
+    setJournal(prev => [entry, ...prev]); // functional update for reliability
     onExit();
   };
 
@@ -220,9 +224,9 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const innerPad  = 16;
   const inner     = ringSize - ringStroke * 2 - innerPad;
 
-  // Big phase typography (~75% of inner ring width)
-  const phaseFontSize = Math.floor(inner * 0.30); // ~66px on default inner ≈ 220
-  const phaseMaxWidth = Math.floor(inner * 0.75); // width cap to avoid overflow
+  // (We’re keeping your existing big type; no size tweaks yet)
+  const phaseFontSize = Math.floor(inner * 0.30);
+  const phaseMaxWidth = Math.floor(inner * 0.75);
 
   return (
     <div className="card fade-in relative overflow-hidden">
@@ -236,7 +240,6 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
       <div className="relative flex flex-col items-center justify-center">
         <ProgressRing progress={progress} size={ringSize} stroke={ringStroke} />
 
-        {/* Centred inner disc (clip) */}
         <div
           className="absolute rounded-full overflow-hidden"
           style={{ width: inner, height: inner, top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
@@ -249,7 +252,6 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
             style={{ width: inner, height: inner, pointerEvents: "none" }}
           >
-            {/* Core */}
             <div
               className="absolute inset-0 rounded-full breath-core"
               style={{
@@ -258,7 +260,6 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
                 transition: "transform 90ms linear, opacity 120ms ease"
               }}
             />
-            {/* Halo */}
             <div
               className="absolute inset-0 rounded-full breath-halo"
               style={{
@@ -269,12 +270,12 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
             />
           </div>
 
-          {/* Breathing instruction – layers for word<->word cross-fade (1.6s) */}
+          {/* Word↔word cross-fade */}
           {isBreath && (topText || bottomText) && (
             <div className="absolute inset-0 flex items-center justify-center z-10">
               {topText && (
                 <span
-                  className={`phase-layer font-semibold drop-shadow-sm text-center`}
+                  className="phase-layer font-semibold drop-shadow-sm text-center"
                   style={{
                     fontSize: `${phaseFontSize}px`,
                     maxWidth: `${phaseMaxWidth}px`,
@@ -290,7 +291,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
               )}
               {bottomText && (
                 <span
-                  className={`phase-layer font-semibold drop-shadow-sm text-center`}
+                  className="phase-layer font-semibold drop-shadow-sm text-center"
                   style={{
                     fontSize: `${phaseFontSize}px`,
                     maxWidth: `${phaseMaxWidth}px`,
@@ -307,18 +308,16 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
             </div>
           )}
 
-          {/* Long fade to nothing during pauses (3.2s) */}
+          {/* Word → nothing (pause) long fade (now truly animated) */}
           {isBreath && !displayPhase && fadeOutText && (
             <div className="absolute inset-0 flex items-center justify-center z-10">
               <span
-                className="phase-to-null font-semibold drop-shadow-sm text-center"
+                className={`phase-to-null ${fadeOutActive ? "phase-to-null-active" : ""} font-semibold drop-shadow-sm text-center`}
                 style={{
                   fontSize: `${phaseFontSize}px`,
                   maxWidth: `${phaseMaxWidth}px`,
                   lineHeight: 1,
-                  letterSpacing: "0.02em",
-                  opacity: 0,
-                  transform: "translateY(-6px)"
+                  letterSpacing: "0.02em"
                 }}
               >
                 {fadeOutText}
