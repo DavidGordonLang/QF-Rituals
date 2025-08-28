@@ -10,7 +10,7 @@ type JournalEntry = { id: string; ritualId: string; ritualName: string; endedAt:
 export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const total = ritual.totalSeconds;
 
-  // coarse integer seconds and fine float seconds
+  // coarse integer seconds for counters, fine float seconds for smooth timing
   const [elapsed, setElapsed] = React.useState(0);
   const [fineElapsed, setFineElapsed] = React.useState(0);
   const [running, setRunning] = React.useState(false);
@@ -88,23 +88,70 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const remaining = total - elapsed;
   const progress  = elapsed / total;
 
-  // ——— Breathing helpers ———
+  // ——— New breathing cycle with pauses ———
   const isBreath = current.kind === "breath";
-  const breathCycle = 14; // 4 + 4 + 6
-  const t = ((sectionElapsedFine % breathCycle) + breathCycle) % breathCycle;
 
-  const computedPhase =
-    t < 4 ? "Inhale" :
-    t < 8 ? "Hold"   :
-            "Exhale";
+  // Phase durations (seconds)
+  const INHALE = 4.0;
+  const PAUSE1 = 0.75;   // after inhale
+  const HOLD   = 4.0;
+  const EXHALE = 6.0;
+  const PAUSE2 = 0.75;   // after exhale
+  const CYCLE  = INHALE + PAUSE1 + HOLD + EXHALE + PAUSE2; // 15.5
 
-  // Two-layer crossfade state (only active during breath)
-  const [topText, setTopText]       = React.useState(computedPhase);
+  // Map current fine time in section to phase, scale (0..1), and glowOpacity (0..1)
+  const breath = React.useMemo(() => {
+    if (!isBreath) return { phase: null as null | "Inhale" | "Hold" | "Exhale", scale: 0, glowOpacity: 1 };
+    let t = sectionElapsedFine % CYCLE; if (t < 0) t += CYCLE;
+
+    const MIN = 0.02; // tiny dot
+    const MAX = 1.00; // full
+
+    const lerp = (a: number, b: number, p: number) => a + (b - a) * p;
+
+    // Phase windows
+    if (t < INHALE) {
+      // Inhale: 0 -> 4s (expand)
+      const p = t / INHALE;
+      return { phase: "Inhale" as const, scale: lerp(MIN, MAX, p), glowOpacity: 0.85 };
+    }
+    t -= INHALE;
+
+    if (t < PAUSE1) {
+      // Pause after inhale: freeze at MAX, dim + pulse
+      const pulse = 0.06 * Math.sin((t / PAUSE1) * Math.PI * 2);
+      return { phase: null, scale: MAX, glowOpacity: 0.72 + pulse };
+    }
+    t -= PAUSE1;
+
+    if (t < HOLD) {
+      // Hold: frozen at MAX, steady
+      return { phase: "Hold" as const, scale: MAX, glowOpacity: 0.85 };
+    }
+    t -= HOLD;
+
+    if (t < EXHALE) {
+      // Exhale: 0 -> 6s (contract)
+      const p = t / EXHALE;
+      return { phase: "Exhale" as const, scale: lerp(MAX, MIN, p), glowOpacity: 0.85 };
+    }
+    t -= EXHALE;
+
+    // Pause after exhale: freeze at MIN, dim + pulse
+    const pulse = 0.06 * Math.sin((t / PAUSE2) * Math.PI * 2);
+    return { phase: null, scale: MIN, glowOpacity: 0.72 + pulse };
+  }, [isBreath, sectionElapsedFine]);
+
+  const displayPhase = breath.phase; // null during pauses
+
+  // —— Cross-fade label state (only when displayPhase is non-null) ——
+  const [topText, setTopText]       = React.useState<string | null>(displayPhase);
   const [bottomText, setBottomText] = React.useState<string | null>(null);
   const [showTop, setShowTop]       = React.useState(true);
 
-  // Reset phase state when leaving breath so nothing lingers.
+  // Reset when leaving breathing OR when displayPhase becomes null (pauses)
   const prevIsBreath = React.useRef(isBreath);
+  const prevDisplay  = React.useRef<string | null>(displayPhase);
   React.useEffect(() => {
     if (!isBreath && prevIsBreath.current) {
       setTopText("Inhale");
@@ -115,15 +162,26 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   }, [isBreath]);
 
   React.useEffect(() => {
-    if (!isBreath) return;
-    if (computedPhase === (showTop ? topText : bottomText)) return;
+    // If hidden (pause), clear both layers
+    if (!displayPhase) {
+      setTopText(null);
+      setBottomText(null);
+      setShowTop(true);
+      prevDisplay.current = null;
+      return;
+    }
 
-    if (showTop) setBottomText(computedPhase);
-    else         setTopText(computedPhase);
+    // First entry or unchanged
+    if (prevDisplay.current === displayPhase) return;
+
+    // Swap into the hidden layer then flip
+    if (showTop) setBottomText(displayPhase);
+    else         setTopText(displayPhase);
 
     const id = setTimeout(() => setShowTop(!showTop), 20);
+    prevDisplay.current = displayPhase;
     return () => clearTimeout(id);
-  }, [isBreath, computedPhase, showTop, topText, bottomText]);
+  }, [displayPhase, showTop]);
 
   // Complete → (optional) note → save → return to home
   const promptJournalAndExit = () => {
@@ -162,28 +220,46 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
         >
           <div className="w-full h-full number-plate" />
 
-          {/* Breath wrapper */}
+          {/* Glow wrapper — REACT-DRIVEN scale + opacity */}
           <div
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
             style={{ width: inner, height: inner, pointerEvents: "none" }}
           >
-            <div className={`absolute inset-0 rounded-full breath-core ${isBreath ? "breath-anim" : ""}`} />
-            <div className={`absolute inset-0 rounded-full breath-halo ${isBreath ? "breath-anim" : ""}`} />
+            {/* Core */}
+            <div
+              className="absolute inset-0 rounded-full breath-core"
+              style={{
+                transform: `scale(${breath.scale})`,
+                opacity: breath.glowOpacity,
+                transition: "transform 90ms linear, opacity 120ms ease"
+              }}
+            />
+            {/* Halo */}
+            <div
+              className="absolute inset-0 rounded-full breath-halo"
+              style={{
+                transform: `scale(${breath.scale})`,
+                opacity: Math.min(1, breath.glowOpacity + 0.05),
+                transition: "transform 90ms linear, opacity 120ms ease"
+              }}
+            />
           </div>
 
-          {/* Breathing instruction – ONLY render during breath */}
-          {isBreath && (
+          {/* Breathing instruction – only during Inhale/Hold/Exhale */}
+          {isBreath && (topText || bottomText) && (
             <div className="absolute inset-0 flex items-center justify-center z-10">
               {/* Top layer */}
-              <span
-                className={`phase-layer text-lg font-semibold drop-shadow-sm
-                           ${showTop ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"}`}
-                style={{ transitionDelay: showTop ? "80ms" : "0ms" }}
-              >
-                {topText}
-              </span>
+              {topText && (
+                <span
+                  className={`phase-layer text-lg font-semibold drop-shadow-sm
+                             ${showTop ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"}`}
+                  style={{ transitionDelay: showTop ? "80ms" : "0ms" }}
+                >
+                  {topText}
+                </span>
+              )}
               {/* Bottom layer */}
-              {bottomText !== null && (
+              {bottomText && (
                 <span
                   className={`phase-layer text-lg font-semibold drop-shadow-sm
                              ${showTop ? "opacity-0 -translate-y-1" : "opacity-100 translate-y-0"}`}
@@ -205,7 +281,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
         >
           <div
             className="font-semibold tabular-nums drop-shadow-sm tracking-[.05em]"
-            style={{ minWidth: "4ch", textAlign: isBreath ? "right" as const : "center" as const }}
+            style={{ minWidth: "4ch", textAlign: isBreath ? ("right" as const) : ("center" as const) }}
           >
             {formatTime(remaining)}
           </div>
@@ -219,7 +295,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
         </div>
         <div className="mt-1 text-[13px] text-slate-300">
           {current.kind === "breath"
-            ? "4–4–6 rhythm. Follow the soft glow to pace inhale, hold, exhale."
+            ? "4–4–6 rhythm with calm pauses. Follow the glow."
             : current.kind === "intention"
             ? "Set one clear intention for your day."
             : current.kind === "posture"
