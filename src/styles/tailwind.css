@@ -40,15 +40,21 @@
 
 /* Phase text layers (cross-fade via transitions) */
 .phase-layer {
-  @apply absolute transition-all duration-[800ms] ease-in-out will-change-[opacity,transform];
+  /* 1.6s for word<->word transitions (double previous) */
+  @apply absolute transition-all duration-[1600ms] ease-in-out will-change-[opacity,transform];
+}
+/* Long fade when going from word -> nothing (during pauses) */
+.phase-to-null {
+  /* 3.2s (quadruple) + gentle upward drift */
+  @apply absolute transition-all duration-[3200ms] ease-in-out will-change-[opacity,transform];
 }
 
-/* Breathing animation (scale only to remain centred) */
+/* Legacy continuous breathing keyframes kept for future patterns (unused here) */
 @keyframes breathScale14 {
-  0%        { transform: scale(0.02); opacity: .35; }   /* Inhale starts tiny */
-  28.571%   { transform: scale(1.00); opacity: .55; }   /* Inhale done (4s) */
-  57.142%   { transform: scale(1.00); opacity: .55; }   /* Hold done (8s)   */
-  100%      { transform: scale(0.02); opacity: .35; }   /* Exhale done (14s)*/
+  0%        { transform: scale(0.02); opacity: .35; }
+  28.571%   { transform: scale(1.00); opacity: .55; }
+  57.142%   { transform: scale(1.00); opacity: .55; }
+  100%      { transform: scale(0.02); opacity: .35; }
 }
 .breath-anim { animation: breathScale14 14s ease-in-out infinite; transform-origin: center; }
 
@@ -71,10 +77,6 @@
   mix-blend-mode: screen;
 }
 .number-plate{
-  background: radial-gradient(circle at 50% 50%,
-    rgba(255,255,255,0.14),
-    rgba(255,255,255,0.06) 62%,
-    rgba(0,0,0,0) 100%);
-  box-shadow: inset 0 0 26px rgba(0,0,0,0.38),
-              inset 0 0 140px rgba(0,0,0,0.25);
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.14), rgba(255,255,255,0.06) 62%, rgba(0,0,0,0) 100%);
+  box-shadow: inset 0 0 26px rgba(0,0,0,0.38), inset 0 0 140px rgba(0,0,0,0.25);
 }
