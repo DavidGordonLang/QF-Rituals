@@ -8,7 +8,7 @@ import { getBreathState, BreathType } from "../data/breathLibrary";
 type Props = {
   ritual: Ritual;
   onExit: () => void;
-  onCompleteJournal?: (entry: JournalEntry) => void; // <- used to open JournalEditor
+  onCompleteJournal?: (entry: JournalEntry) => void;
 };
 type JournalEntry = { id: string; ritualId: string; ritualName: string; endedAt: number; note?: string };
 
@@ -47,7 +47,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit, onCompleteJournal
     if (e >= total) {
       cancel(); setRunning(false);
       gong();
-      finalize(); // <- send to JournalEditor
+      finalize();
       return;
     }
     rafRef.current = requestAnimationFrame(tick);
@@ -94,36 +94,42 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit, onCompleteJournal
   const progress  = elapsed / total;
 
   // Breathing (via library)
-  const isBreath = current.kind === "breath";
-  const breathType: BreathType | null = isBreath ? current.breathType : null;
+  const isBreathSection = current.kind === "breath";
+  const breathType: BreathType | null = isBreathSection ? current.breathType : null;
+
+  // IMPORTANT: only activate breathing visuals once we're actually running
+  const breathActive = isBreathSection && running && sectionElapsedFine > 0.05;
 
   const breath = React.useMemo(() => {
-    if (!isBreath || !breathType) return { phase: null as null | "Inhale" | "Hold" | "Exhale", scale: 0, glowOpacity: 1, cycleLength: 0 };
+    if (!breathActive || !breathType)
+      return { phase: null as null | "Inhale" | "Hold" | "Exhale", scale: 0, glowOpacity: 0, cycleLength: 0 };
     return getBreathState(breathType, sectionElapsedFine);
-  }, [isBreath, breathType, sectionElapsedFine]);
+  }, [breathActive, breathType, sectionElapsedFine]);
 
-  const displayPhase = breath.phase;
+  const displayPhase = breath.phase; // null during pauses
 
   // Word cross-fades (1.6s) and pause fade (3.2s)
-  const [topText, setTopText]       = React.useState<string | null>(displayPhase);
+  const [topText, setTopText]       = React.useState<string | null>(null);
   const [bottomText, setBottomText] = React.useState<string | null>(null);
   const [showTop, setShowTop]       = React.useState(true);
   const [fadeOutText, setFadeOutText] = React.useState<string | null>(null);
   const [fadeOutActive, setFadeOutActive] = React.useState(false);
   const fadeTimeout = React.useRef<number | null>(null);
-  const prevIsBreath = React.useRef(isBreath);
-  const prevDisplay  = React.useRef<string | null>(displayPhase);
+  const prevDisplay  = React.useRef<string | null>(null);
 
+  // When breath toggles on/off (start/pause), reset text layers
   React.useEffect(() => {
-    if (!isBreath && prevIsBreath.current) {
-      setTopText("Inhale"); setBottomText(null); setShowTop(true);
+    if (!breathActive) {
+      setTopText(null); setBottomText(null); setShowTop(true);
       setFadeOutText(null); setFadeOutActive(false);
       if (fadeTimeout.current) { window.clearTimeout(fadeTimeout.current); fadeTimeout.current = null; }
+      prevDisplay.current = null;
     }
-    prevIsBreath.current = isBreath;
-  }, [isBreath]);
+  }, [breathActive]);
 
   React.useEffect(() => {
+    if (!breathActive) return;
+
     if (!displayPhase) {
       const last = prevDisplay.current;
       if (last) {
@@ -139,15 +145,17 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit, onCompleteJournal
       prevDisplay.current = null;
       return;
     }
+
     if (prevDisplay.current === displayPhase) return;
+
     if (showTop) setBottomText(displayPhase);
     else         setTopText(displayPhase);
     const id = setTimeout(() => setShowTop(!showTop), 20);
     prevDisplay.current = displayPhase;
     return () => clearTimeout(id);
-  }, [displayPhase, showTop]);
+  }, [displayPhase, showTop, breathActive]);
 
-  // On completion: always open Journal Editor (no pop-up)
+  // Completion -> Journal Editor
   const finalize = () => {
     const entry: JournalEntry = {
       id: `${Date.now()}`,
@@ -155,11 +163,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit, onCompleteJournal
       ritualName: ritual.name,
       endedAt: Date.now()
     };
-    if (onCompleteJournal) {
-      onCompleteJournal(entry); // << hand off to App's JournalEditor
-      return;
-    }
-    // Fallback: persist and return home
+    if (onCompleteJournal) { onCompleteJournal(entry); return; }
     try {
       const raw = localStorage.getItem(JOURNAL_KEY);
       const list: JournalEntry[] = raw ? JSON.parse(raw) : [];
@@ -189,25 +193,39 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit, onCompleteJournal
       {/* Ring / Inner */}
       <div className="relative flex flex-col items-center justify-center">
         <ProgressRing progress={progress} size={ringSize} stroke={ringStroke} />
+
         <div
           className="absolute rounded-full overflow-hidden"
           style={{ width: inner, height: inner, top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
           aria-hidden
         >
           <div className="w-full h-full number-plate" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" style={{ width: inner, height: inner, pointerEvents: "none" }}>
+
+          {/* Glow: only active when running */}
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+            style={{ width: inner, height: inner, pointerEvents: "none" }}
+          >
             <div
               className="absolute inset-0 rounded-full breath-core"
-              style={{ transform: `scale(${breath.scale})`, opacity: breath.glowOpacity, transition: "transform 90ms linear, opacity 120ms ease" }}
+              style={{
+                transform: `scale(${breathActive ? breath.scale : 0})`,
+                opacity: breathActive ? breath.glowOpacity : 0,
+                transition: "transform 200ms ease, opacity 240ms ease"
+              }}
             />
             <div
               className="absolute inset-0 rounded-full breath-halo"
-              style={{ transform: `scale(${breath.scale})`, opacity: Math.min(1, breath.glowOpacity + 0.05), transition: "transform 90ms linear, opacity 120ms ease" }}
+              style={{
+                transform: `scale(${breathActive ? breath.scale : 0})`,
+                opacity: breathActive ? Math.min(1, breath.glowOpacity + 0.05) : 0,
+                transition: "transform 200ms ease, opacity 240ms ease"
+              }}
             />
           </div>
 
-          {/* Phase words */}
-          {isBreath && (topText || bottomText) && (
+          {/* Phase words (only when running) */}
+          {breathActive && (topText || bottomText) && (
             <div className="absolute inset-0 flex items-center justify-center z-10">
               {topText && (
                 <span
@@ -240,35 +258,35 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit, onCompleteJournal
             </div>
           )}
 
-          {/* Word → nothing during pauses */}
-          {isBreath && !displayPhase && (prevDisplay.current) && (
+          {/* Word → nothing during pauses (only when running) */}
+          {breathActive && !displayPhase && (prevDisplay.current || fadeOutText) && (
             <div className="absolute inset-0 flex items-center justify-center z-10">
               <span
-                className={`phase-to-null ${/* controlled by state above */ ""}`}
+                className={`phase-to-null ${fadeOutActive ? "phase-to-null-active" : ""} font-semibold drop-shadow-sm text-center`}
                 style={{
                   fontSize: `${phaseFontSize}px`,
                   maxWidth: `${phaseMaxWidth}px`,
                   lineHeight: 1.1,
-                  letterSpacing: "0.02em",
-                  opacity: 0,
-                  transform: "translateY(-6px)",
-                  transition: "opacity 3200ms ease-in-out, transform 3200ms ease-in-out"
+                  letterSpacing: "0.02em"
                 }}
               >
-                {prevDisplay.current}
+                {fadeOutText}
               </span>
             </div>
           )}
         </div>
 
-        {/* Countdown time */}
+        {/* Time: center before start; glide to top-right only when breathActive */}
         <div
           className={`absolute z-10 transition-all duration-[1400ms] ease-out
-                      ${isBreath
+                      ${breathActive
                         ? "top-3 right-4 text-2xl opacity-80"
                         : "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl opacity-100"}`}
         >
-          <div className="font-semibold tabular-nums drop-shadow-sm tracking-[.05em]" style={{ minWidth: "4ch", textAlign: isBreath ? ("right" as const) : ("center" as const) }}>
+          <div
+            className="font-semibold tabular-nums drop-shadow-sm tracking-[.05em]"
+            style={{ minWidth: "4ch", textAlign: breathActive ? ("right" as const) : ("center" as const) }}
+          >
             {formatTime(remaining)}
           </div>
         </div>
@@ -279,7 +297,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit, onCompleteJournal
         <div className="text-base">Now: <span className="font-semibold">{current.label}</span></div>
         <div className="mt-1 text-[13px] text-slate-300">
           {current.kind === "breath"
-            ? (isBreath ? current.label : "")
+            ? current.label
             : current.kind === "intention"
             ? "Set one clear intention for your day."
             : current.kind === "posture"
