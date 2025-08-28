@@ -1,9 +1,9 @@
 import React from "react";
 import { stockRituals, Ritual } from "../data/stockRituals";
 import { TimerScreen } from "../components/TimerScreen";
-import JournalList from "../components/JournalList";
-import SettingsPanel from "../components/SettingsPanel";
-import JournalEditor from "../components/JournalEditor";
+import { JournalList } from "../components/JournalList";      // ← named export
+import { SettingsPanel } from "../components/SettingsPanel";  // ← named export
+import JournalEditor from "../components/JournalEditor";      // ← default export
 
 type Tab = "rituals" | "journal" | "settings" | "timer" | "journalEditor";
 
