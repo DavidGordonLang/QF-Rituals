@@ -1,6 +1,8 @@
+import type { BreathType } from "./breathLibrary";
+
 export type Section =
-  | { kind: "breath"; label: string; seconds: number; breathType: import("./breathLibrary").BreathType; cycles?: number }
-  | { kind: "intention"; label: string; seconds: number }
+  | { kind: "breath"; label: string; seconds: number; breathType: BreathType; cycles?: number }
+  | { kind: "intention"; label: string; seconds: number; prompts?: string[] }
   | { kind: "posture"; label: string; seconds: number; prompts?: string[] }
   | { kind: "presence"; label: string; seconds: number; prompts?: string[] };
 
@@ -11,12 +13,15 @@ export type Ritual = {
   description: string;
   totalSeconds: number;
   sections: Section[];
-  journalPrompt?: string; // optional prompt at end
+  journalPrompt?: string; // optional prompt shown on the Journal screen after completion
 };
 
 const min = (n: number) => n * 60;
 
 export const stockRituals: Ritual[] = [
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Morning Alignment (7 min)
+  // ─────────────────────────────────────────────────────────────────────────────
   {
     id: "morning_alignment",
     name: "Morning Alignment",
@@ -32,8 +37,9 @@ export const stockRituals: Ritual[] = [
     journalPrompt: "What intention feels most alive now?"
   },
 
-  // ======== NEW ========
-
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Midday Reset (5 min)
+  // ─────────────────────────────────────────────────────────────────────────────
   {
     id: "midday_reset",
     name: "Midday Reset",
@@ -43,7 +49,7 @@ export const stockRituals: Ritual[] = [
     sections: [
       // 1 min grounding breath (physio sigh ×3, then settle)
       { kind: "breath", label: "Grounding breath", seconds: 60, breathType: "physioSigh", cycles: 3 },
-      // 2 mins 4-4-6
+      // 2 mins 4-4-6 breathing (paused variant you liked)
       { kind: "breath", label: "Breathing", seconds: 120, breathType: "fourFourSix_paused" },
       // 2 mins posture + presence scan
       {
@@ -63,18 +69,21 @@ export const stockRituals: Ritual[] = [
     journalPrompt: "One thing now feels lighter?"
   },
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Stress Reset (3 min)
+  // ─────────────────────────────────────────────────────────────────────────────
   {
     id: "stress_reset",
     name: "Stress Reset",
     guided: true,
-    description: "Rapid downshift and recentre.",
+    description: "Rapid downshift and recenter.",
     totalSeconds: 3 * 60,
     sections: [
-      // 30 sec exhale-focus (mini physio loop)
+      // 30 sec exhale-focus (mini physiological sigh loop)
       { kind: "breath", label: "Release", seconds: 30, breathType: "physioSigh" },
-      // 1 min physio cycles
-      { kind: "breath", label: "Physiological sigh", seconds: 60, breathType: "physioSigh" },
-      // 90 sec centring
+      // 1 min physiological sigh cycles
+      { kind: "breath", label: "Physiological Sigh", seconds: 60, breathType: "physioSigh" },
+      // 90 sec centring prompts
       {
         kind: "presence",
         label: "Centre",
@@ -89,5 +98,134 @@ export const stockRituals: Ritual[] = [
       }
     ],
     journalPrompt: "What shifted after the reset?"
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Evening Integration (7 min)
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    id: "evening_integration",
+    name: "Evening Integration",
+    guided: true,
+    description: "Reflect on the day, release tension, and prepare the mind for deep rest.",
+    totalSeconds: min(7), // 420s
+    sections: [
+      // 1 min intention review
+      {
+        kind: "intention",
+        label: "Review",
+        seconds: 60,
+        prompts: ["What mattered today? One win, one lesson."]
+      },
+      // 3 mins 4-7-8 (with pause after exhale)
+      { kind: "breath", label: "4-7-8 Breathing", seconds: 180, breathType: "fourSevenEight_pausedEnd" },
+      // 2 mins journaling prompt (within the ritual flow — gentle fade text)
+      {
+        kind: "presence",
+        label: "Optional journal",
+        seconds: 120,
+        prompts: ["If you like: one win, one lesson, one thing for tomorrow."]
+      },
+      // 1 min soft reset reflection
+      {
+        kind: "presence",
+        label: "Reset",
+        seconds: 60,
+        prompts: ["Let the day soften. Breathe slowly."]
+      }
+    ],
+    journalPrompt: "One win, one lesson, and one thing you’ll improve tomorrow."
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Flow Trigger (5 min)
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    id: "flow_trigger",
+    name: "Flow Trigger",
+    guided: true,
+    description: "Prime deep focus: one task, one breath.",
+    totalSeconds: min(5),
+    sections: [
+      // 1 min grounding intention
+      {
+        kind: "intention",
+        label: "Grounding intention",
+        seconds: 60,
+        prompts: ["One task, one breath."]
+      },
+      // 2 mins resonant breathing (5.5 / 5.5)
+      { kind: "breath", label: "Resonant breathing", seconds: 120, breathType: "resonant_5_5" },
+      // 2 mins soft focus + open awareness visualisation
+      {
+        kind: "presence",
+        label: "Open awareness",
+        seconds: 120,
+        prompts: ["Widen attention. Keep the breath easy. Begin gently."]
+      }
+    ],
+    journalPrompt: "What’s the one clear next step?"
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Micro Check-ins (90 sec)
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    id: "micro_checkins",
+    name: "Micro Check-ins",
+    guided: true,
+    description: "Quick reset to realign and return to work.",
+    totalSeconds: 90,
+    sections: [
+      // physiological sigh ×2 (approx)
+      { kind: "breath", label: "Reset breaths", seconds: 25, breathType: "physioSigh" },
+      // prompt: what matters now?
+      {
+        kind: "intention",
+        label: "Refocus",
+        seconds: 35,
+        prompts: ["What is the one thing that matters now?"]
+      },
+      // 30-sec gentle re-centre
+      {
+        kind: "presence",
+        label: "Re-centre",
+        seconds: 30,
+        prompts: ["Breathe softly. Begin."]
+      }
+    ],
+    journalPrompt: "One sentence: what matters now?"
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Surface Desire → Redirect (variable – default 60s)
+  // ─────────────────────────────────────────────────────────────────────────────
+  {
+    id: "desire_redirect",
+    name: "Surface Desire → Redirect",
+    guided: true,
+    description: "Notice the pull, link it to a deep goal, and return by choice.",
+    totalSeconds: 60, // default; we can make this configurable later
+    sections: [
+      {
+        kind: "intention",
+        label: "Notice",
+        seconds: 20,
+        prompts: ["What’s the surface desire? Name it plainly."]
+      },
+      {
+        kind: "intention",
+        label: "Redirect",
+        seconds: 20,
+        prompts: ["What deeper goal does this link to? Choose the path back."]
+      },
+      {
+        kind: "presence",
+        label: "Return",
+        seconds: 20,
+        prompts: ["Soft fade: return to what you chose."]
+      }
+    ],
+    journalPrompt: "What did you notice, and how did you redirect?"
   }
 ];
