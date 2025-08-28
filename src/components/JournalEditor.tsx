@@ -34,7 +34,7 @@ export default function JournalEditor({ entry, prompt, onSave, onCancel }: Props
     <div className="card fade-in">
       <div className="mb-2 text-xs text-slate-300">Journal</div>
       <div className="text-xl font-semibold">{entry.ritualName}</div>
-      <div className="mt-2 text-sm opacity-80">{prompt ?? "How did that feel?"}</div>
+      <div className="mt-2 text-sm opacity-80">{prompt ?? "Add a short reflection (optional)."} </div>
 
       <textarea
         className="mt-4 w-full h-40 rounded-xl bg-white/10 border border-white/10 p-3 outline-none focus:border-white/20"
