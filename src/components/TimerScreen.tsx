@@ -99,7 +99,6 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const PAUSE2 = 0.75;   // after exhale
   const CYCLE  = INHALE + PAUSE1 + HOLD + EXHALE + PAUSE2; // 15.5
 
-  // Map current fine time in section to phase, scale (0..1), and glowOpacity (0..1)
   const breath = React.useMemo(() => {
     if (!isBreath) return { phase: null as null | "Inhale" | "Hold" | "Exhale", scale: 0, glowOpacity: 1 };
     let t = sectionElapsedFine % CYCLE; if (t < 0) t += CYCLE;
@@ -109,47 +108,40 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
 
     const lerp = (a: number, b: number, p: number) => a + (b - a) * p;
 
-    // Phase windows
     if (t < INHALE) {
-      // Inhale: 0 -> 4s (expand)
       const p = t / INHALE;
       return { phase: "Inhale" as const, scale: lerp(MIN, MAX, p), glowOpacity: 0.85 };
     }
     t -= INHALE;
 
     if (t < PAUSE1) {
-      // Pause after inhale: freeze at MAX, dim + pulse
       const pulse = 0.06 * Math.sin((t / PAUSE1) * Math.PI * 2);
       return { phase: null, scale: MAX, glowOpacity: 0.72 + pulse };
     }
     t -= PAUSE1;
 
     if (t < HOLD) {
-      // Hold: frozen at MAX, steady
       return { phase: "Hold" as const, scale: MAX, glowOpacity: 0.85 };
     }
     t -= HOLD;
 
     if (t < EXHALE) {
-      // Exhale: 0 -> 6s (contract)
       const p = t / EXHALE;
       return { phase: "Exhale" as const, scale: lerp(MAX, MIN, p), glowOpacity: 0.85 };
     }
     t -= EXHALE;
 
-    // Pause after exhale: freeze at MIN, dim + pulse
     const pulse = 0.06 * Math.sin((t / PAUSE2) * Math.PI * 2);
     return { phase: null, scale: MIN, glowOpacity: 0.72 + pulse };
   }, [isBreath, sectionElapsedFine]);
 
-  const displayPhase = breath.phase; // null during pauses
+  const displayPhase = breath.phase;
 
-  // —— Cross-fade label state (only when displayPhase is non-null) ——
+  // —— Cross-fade label state ——
   const [topText, setTopText]       = React.useState<string | null>(displayPhase);
   const [bottomText, setBottomText] = React.useState<string | null>(null);
   const [showTop, setShowTop]       = React.useState(true);
 
-  // Reset when leaving breathing OR when displayPhase becomes null (pauses)
   const prevIsBreath = React.useRef(isBreath);
   const prevDisplay  = React.useRef<string | null>(displayPhase);
   React.useEffect(() => {
@@ -162,7 +154,6 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   }, [isBreath]);
 
   React.useEffect(() => {
-    // If hidden (pause), clear both layers
     if (!displayPhase) {
       setTopText(null);
       setBottomText(null);
@@ -170,11 +161,8 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
       prevDisplay.current = null;
       return;
     }
-
-    // First entry or unchanged
     if (prevDisplay.current === displayPhase) return;
 
-    // Swap into the hidden layer then flip
     if (showTop) setBottomText(displayPhase);
     else         setTopText(displayPhase);
 
@@ -183,7 +171,6 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     return () => clearTimeout(id);
   }, [displayPhase, showTop]);
 
-  // Complete → (optional) note → save → return to home
   const promptJournalAndExit = () => {
     const note = window.prompt("Ritual complete. Add a reflection? (optional)") ?? undefined;
     const entry: JournalEntry = {
@@ -194,7 +181,6 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     onExit();
   };
 
-  // Visual sizing
   const ringSize  = 260;
   const ringStroke= 12;
   const innerPad  = 16;
@@ -212,7 +198,6 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
       <div className="relative flex flex-col items-center justify-center">
         <ProgressRing progress={progress} size={ringSize} stroke={ringStroke} />
 
-        {/* Centred inner disc (clip) */}
         <div
           className="absolute rounded-full overflow-hidden"
           style={{ width: inner, height: inner, top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
@@ -220,12 +205,10 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
         >
           <div className="w-full h-full number-plate" />
 
-          {/* Glow wrapper — REACT-DRIVEN scale + opacity */}
           <div
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
             style={{ width: inner, height: inner, pointerEvents: "none" }}
           >
-            {/* Core */}
             <div
               className="absolute inset-0 rounded-full breath-core"
               style={{
@@ -234,7 +217,6 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
                 transition: "transform 90ms linear, opacity 120ms ease"
               }}
             />
-            {/* Halo */}
             <div
               className="absolute inset-0 rounded-full breath-halo"
               style={{
@@ -245,10 +227,8 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
             />
           </div>
 
-          {/* Breathing instruction – only during Inhale/Hold/Exhale */}
           {isBreath && (topText || bottomText) && (
             <div className="absolute inset-0 flex items-center justify-center z-10">
-              {/* Top layer */}
               {topText && (
                 <span
                   className={`phase-layer text-lg font-semibold drop-shadow-sm
@@ -258,7 +238,6 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
                   {topText}
                 </span>
               )}
-              {/* Bottom layer */}
               {bottomText && (
                 <span
                   className={`phase-layer text-lg font-semibold drop-shadow-sm
@@ -272,9 +251,9 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
           )}
         </div>
 
-        {/* Countdown time: glide up only during breath — with fixed-width box to prevent glyph blips */}
+        {/* Countdown time: glide up only during breath */}
         <div
-          className={`absolute z-10 transition-all duration-1200 ease-out
+          className={`absolute z-10 transition-all duration-[1400ms] ease-out
                       ${isBreath
                         ? "top-3 right-4 text-2xl opacity-80"
                         : "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl opacity-100"}`}
