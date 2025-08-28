@@ -38,15 +38,22 @@
 }
 .fade-in { animation: qfFadeIn 0.5s ease-out both; }
 
-/* Phase text layers (cross-fade via transitions) */
+/* Word ↔ word cross-fade (1.6s; unchanged from previous step) */
 .phase-layer {
-  /* 1.6s for word<->word transitions (double previous) */
   @apply absolute transition-all duration-[1600ms] ease-in-out will-change-[opacity,transform];
 }
-/* Long fade when going from word -> nothing (during pauses) */
+
+/* Word → nothing (pause) long fade:
+   Base state = visible; Active state = faded out.
+   We'll toggle the -active class one frame after mount so it animates. */
 .phase-to-null {
-  /* 3.2s (quadruple) + gentle upward drift */
   @apply absolute transition-all duration-[3200ms] ease-in-out will-change-[opacity,transform];
+  opacity: 1;
+  transform: translateY(0);
+}
+.phase-to-null-active {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 /* Legacy continuous breathing keyframes kept for future patterns (unused here) */
