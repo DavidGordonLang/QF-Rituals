@@ -1,24 +1,21 @@
 import React from "react";
 import { stockRituals, Ritual } from "../data/stockRituals";
 import { TimerScreen } from "../components/TimerScreen";
-import { JournalList } from "../components/JournalList";      // ← named export
-import { SettingsPanel } from "../components/SettingsPanel";  // ← named export
-import JournalEditor from "../components/JournalEditor";      // ← default export
+import { JournalList, JournalEntry as JL } from "../components/JournalList";
+import { SettingsPanel } from "../components/SettingsPanel";
+import JournalEditor, { JournalEntry } from "../components/JournalEditor";
 
 type Tab = "rituals" | "journal" | "settings" | "timer" | "journalEditor";
 
-type PendingEntry = {
-  id: string;
-  ritualId: string;
-  ritualName: string;
-  endedAt: number;
-  note?: string;
+type EditorState = {
+  entry: JournalEntry;
+  mode: "new" | "edit";
 };
 
 export default function App() {
   const [tab, setTab] = React.useState<Tab>("rituals");
   const [activeRitual, setActiveRitual] = React.useState<Ritual | null>(null);
-  const [pending, setPending] = React.useState<PendingEntry | null>(null);
+  const [editor, setEditor] = React.useState<EditorState | null>(null);
 
   const startRitual = (r: Ritual) => {
     setActiveRitual(r);
@@ -31,22 +28,37 @@ export default function App() {
   };
 
   // Called by TimerScreen when a ritual finishes
-  const handleCompleteToJournal = (entry: PendingEntry) => {
-    setPending(entry);
+  const handleCompleteToJournal = (entry: JournalEntry) => {
+    setEditor({ entry, mode: "new" });
     setTab("journalEditor");
   };
 
-  const finishJournal = () => {
-    setPending(null);
-    setActiveRitual(null);
-    setTab("rituals");
+  // Editing from the journal list
+  const handleEditFromList = (entry: JL) => {
+    setEditor({ entry, mode: "edit" });
+    setTab("journalEditor");
   };
 
-  const skipJournal = () => finishJournal();
+  const finishEditor = () => {
+    // After new: go home. After edit: stay in journal.
+    if (editor?.mode === "edit") {
+      setEditor(null);
+      setTab("journal");
+    } else {
+      setEditor(null);
+      setActiveRitual(null);
+      setTab("rituals");
+    }
+  };
+
+  const cancelEditor = () => {
+    // Same navigation as save
+    finishEditor();
+  };
 
   const promptFor = (ritualId: string | undefined) =>
-    stockRituals.find(r => r.id === ritualId)?.journalPrompt ||
-    "Add a short reflection (optional).";
+    stockRituals.find((r) => r.id === ritualId)?.journalPrompt ||
+    (editor?.mode === "edit" ? "Edit your reflection." : "Add a short reflection (optional).");
 
   return (
     <div className="p-4 space-y-4">
@@ -74,7 +86,7 @@ export default function App() {
       {/* Views */}
       {tab === "rituals" && (
         <div className="space-y-3">
-          {stockRituals.map(r => (
+          {stockRituals.map((r) => (
             <button key={r.id} className="card card-tappable" onClick={() => startRitual(r)}>
               <div className="text-xs text-slate-300">{r.guided ? "Guided" : "Instant"}</div>
               <div className="flex items-center justify-between">
@@ -87,24 +99,21 @@ export default function App() {
         </div>
       )}
 
-      {tab === "journal" && <JournalList />}
+      {tab === "journal" && <JournalList onEdit={handleEditFromList} />}
 
       {tab === "settings" && <SettingsPanel />}
 
       {tab === "timer" && activeRitual && (
-        <TimerScreen
-          ritual={activeRitual}
-          onExit={exitTimer}
-          onCompleteJournal={handleCompleteToJournal}
-        />
+        <TimerScreen ritual={activeRitual} onExit={exitTimer} onCompleteJournal={handleCompleteToJournal} />
       )}
 
-      {tab === "journalEditor" && pending && (
+      {tab === "journalEditor" && editor && (
         <JournalEditor
-          entry={pending}
-          prompt={promptFor(pending.ritualId)}
-          onSave={finishJournal}
-          onCancel={skipJournal}
+          entry={editor.entry}
+          mode={editor.mode}
+          prompt={promptFor(editor.entry.ritualId)}
+          onSave={finishEditor}
+          onCancel={cancelEditor}
         />
       )}
     </div>
