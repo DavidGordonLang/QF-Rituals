@@ -7,44 +7,67 @@ import JournalEditor from "../components/JournalEditor";
 
 type Tab = "rituals" | "journal" | "settings" | "timer" | "journalEditor";
 
+type PendingEntry = {
+  id: string;
+  ritualId: string;
+  ritualName: string;
+  endedAt: number;
+  note?: string;
+};
+
 export default function App() {
   const [tab, setTab] = React.useState<Tab>("rituals");
   const [activeRitual, setActiveRitual] = React.useState<Ritual | null>(null);
+  const [pending, setPending] = React.useState<PendingEntry | null>(null);
 
-  // Pending journal entry (when a ritual completes)
-  const [pendingEntry, setPendingEntry] = React.useState<{
-    id: string; ritualId: string; ritualName: string; endedAt: number;
-  } | null>(null);
-
-  const startRitual = (r: Ritual) => { setActiveRitual(r); setTab("timer"); };
-  const exitTimer = () => { setActiveRitual(null); setTab("rituals"); };
-
-  const onCompleteJournal = (entry: { id: string; ritualId: string; ritualName: string; endedAt: number }) => {
-    setPendingEntry(entry);
-    setTab("journalEditor");
+  const startRitual = (r: Ritual) => {
+    setActiveRitual(r);
+    setTab("timer");
   };
 
-  const completeJournalAndReturn = () => {
-    setPendingEntry(null);
+  const exitTimer = () => {
     setActiveRitual(null);
     setTab("rituals");
   };
-  const skipJournal = () => completeJournalAndReturn();
+
+  // Called by TimerScreen when a ritual finishes
+  const handleCompleteToJournal = (entry: PendingEntry) => {
+    setPending(entry);
+    setTab("journalEditor");
+  };
+
+  const finishJournal = () => {
+    setPending(null);
+    setActiveRitual(null);
+    setTab("rituals");
+  };
+
+  const skipJournal = () => finishJournal();
+
+  const promptFor = (ritualId: string | undefined) =>
+    stockRituals.find(r => r.id === ritualId)?.journalPrompt ||
+    "Add a short reflection (optional).";
 
   return (
     <div className="p-4 space-y-4">
-      {/* App header */}
+      {/* Header */}
       <div>
         <div className="text-3xl font-bold">Quiet Forge</div>
         <div className="text-sm opacity-80">Rituals for calm, focus, and intent.</div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs (hide during timer/editor) */}
       {tab !== "timer" && tab !== "journalEditor" && (
         <div className="flex gap-3">
-          <button className={`tab ${tab === "rituals" ? "tab-active" : ""}`} onClick={() => setTab("rituals")}>Rituals</button>
-          <button className={`tab ${tab === "journal" ? "tab-active" : ""}`} onClick={() => setTab("journal")}>Journal</button>
-          <button className={`tab ${tab === "settings" ? "tab-active" : ""}`} onClick={() => setTab("settings")}>Settings</button>
+          <button className={`tab ${tab === "rituals" ? "tab-active" : ""}`} onClick={() => setTab("rituals")}>
+            Rituals
+          </button>
+          <button className={`tab ${tab === "journal" ? "tab-active" : ""}`} onClick={() => setTab("journal")}>
+            Journal
+          </button>
+          <button className={`tab ${tab === "settings" ? "tab-active" : ""}`} onClick={() => setTab("settings")}>
+            Settings
+          </button>
         </div>
       )}
 
@@ -72,18 +95,15 @@ export default function App() {
         <TimerScreen
           ritual={activeRitual}
           onExit={exitTimer}
-          onCompleteJournal={(e) => onCompleteJournal(e)}
+          onCompleteJournal={handleCompleteToJournal}
         />
       )}
 
-      {tab === "journalEditor" && pendingEntry && (
+      {tab === "journalEditor" && pending && (
         <JournalEditor
-          entry={pendingEntry}
-          prompt={
-            stockRituals.find(r => r.id === pendingEntry.ritualId)?.journalPrompt ||
-            "Add a short reflection (optional)."
-          }
-          onSave={completeJournalAndReturn}
+          entry={pending}
+          prompt={promptFor(pending.ritualId)}
+          onSave={finishJournal}
           onCancel={skipJournal}
         />
       )}
