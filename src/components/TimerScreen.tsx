@@ -103,19 +103,23 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     if (!isBreath) return { phase: null as null | "Inhale" | "Hold" | "Exhale", scale: 0, glowOpacity: 1 };
     let t = sectionElapsedFine % CYCLE; if (t < 0) t += CYCLE;
 
-    const MIN = 0.02; // tiny dot
-    const MAX = 1.00; // full
+    /* Visibility and motion tuning */
+    const MIN = 0.06;      // slightly larger “point” so it remains visible
+    const MAX = 1.00;      // full
+    const EXHALE_PULSE = 0.10; // stronger micro-breath when tiny
+    const PAUSE_PULSE  = 0.06; // subtle pulse when large
 
     const lerp = (a: number, b: number, p: number) => a + (b - a) * p;
 
     if (t < INHALE) {
-      const p = t / INHALE;
+      const p = t / INHALE;                       // expand 0 -> 1
       return { phase: "Inhale" as const, scale: lerp(MIN, MAX, p), glowOpacity: 0.85 };
     }
     t -= INHALE;
 
     if (t < PAUSE1) {
-      const pulse = 0.06 * Math.sin((t / PAUSE1) * Math.PI * 2);
+      // full size, dim + gentle pulse
+      const pulse = PAUSE_PULSE * Math.sin((t / PAUSE1) * Math.PI * 2);
       return { phase: null, scale: MAX, glowOpacity: 0.72 + pulse };
     }
     t -= PAUSE1;
@@ -126,43 +130,67 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     t -= HOLD;
 
     if (t < EXHALE) {
-      const p = t / EXHALE;
+      const p = t / EXHALE;                       // contract 1 -> 0
       return { phase: "Exhale" as const, scale: lerp(MAX, MIN, p), glowOpacity: 0.85 };
     }
     t -= EXHALE;
 
-    const pulse = 0.06 * Math.sin((t / PAUSE2) * Math.PI * 2);
-    return { phase: null, scale: MIN, glowOpacity: 0.72 + pulse };
+    // pause after exhale: tiny but visibly “breathes” a bit
+    const pulse = EXHALE_PULSE * Math.sin((t / PAUSE2) * Math.PI * 2);
+    const pulseScale = Math.max(MIN, MIN + pulse);
+    return { phase: null, scale: pulseScale, glowOpacity: 0.72 + (PAUSE_PULSE * 0.6) * Math.sin((t / PAUSE2) * Math.PI * 2) };
   }, [isBreath, sectionElapsedFine]);
 
-  const displayPhase = breath.phase;
+  const displayPhase = breath.phase; // null during pauses
 
   // —— Cross-fade label state ——
   const [topText, setTopText]       = React.useState<string | null>(displayPhase);
   const [bottomText, setBottomText] = React.useState<string | null>(null);
   const [showTop, setShowTop]       = React.useState(true);
 
+  // When we go to a pause (displayPhase=null), fade the last word out slowly (3.2s)
+  const [fadeOutText, setFadeOutText] = React.useState<string | null>(null);
+  const fadeTimeout = React.useRef<number | null>(null);
+
   const prevIsBreath = React.useRef(isBreath);
   const prevDisplay  = React.useRef<string | null>(displayPhase);
+
   React.useEffect(() => {
     if (!isBreath && prevIsBreath.current) {
+      // leaving breath entirely
       setTopText("Inhale");
       setBottomText(null);
       setShowTop(true);
+      setFadeOutText(null);
+      if (fadeTimeout.current) { window.clearTimeout(fadeTimeout.current); fadeTimeout.current = null; }
     }
     prevIsBreath.current = isBreath;
   }, [isBreath]);
 
   React.useEffect(() => {
+    // If now pausing (no label), start a long fade of the previous visible word
     if (!displayPhase) {
+      const last = prevDisplay.current;
+      if (last) {
+        setFadeOutText(last);
+        if (fadeTimeout.current) window.clearTimeout(fadeTimeout.current);
+        fadeTimeout.current = window.setTimeout(() => {
+          setFadeOutText(null);
+          fadeTimeout.current = null;
+        }, 3300); // a hair over 3.2s to ensure completion
+      }
+      // also clear layered words so they don't linger
       setTopText(null);
       setBottomText(null);
       setShowTop(true);
       prevDisplay.current = null;
       return;
     }
+
+    // Have a label (Inhale/Hold/Exhale)
     if (prevDisplay.current === displayPhase) return;
 
+    // Swap into hidden layer then flip (1.6s cross-fade handled by CSS)
     if (showTop) setBottomText(displayPhase);
     else         setTopText(displayPhase);
 
@@ -171,20 +199,30 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     return () => clearTimeout(id);
   }, [displayPhase, showTop]);
 
+  // Complete → (optional) note → save → return to home
   const promptJournalAndExit = () => {
     const note = window.prompt("Ritual complete. Add a reflection? (optional)") ?? undefined;
     const entry: JournalEntry = {
-      id: `${Date.now()}`, ritualId: ritual.id, ritualName: ritual.name, endedAt: Date.now(),
+      id: `${Date.now()}`,
+      ritualId: ritual.id,
+      ritualName: ritual.name,
+      endedAt: Date.now(),
       note: note && note.trim().length ? note : undefined
     };
-    setJournal([entry, ...journal]);
+    // Functional update to avoid stale state; ensures persistence
+    setJournal(prev => [entry, ...prev]);
     onExit();
   };
 
+  // Visual sizing
   const ringSize  = 260;
   const ringStroke= 12;
   const innerPad  = 16;
   const inner     = ringSize - ringStroke * 2 - innerPad;
+
+  // Big phase typography (~75% of inner ring width)
+  const phaseFontSize = Math.floor(inner * 0.30); // ~66px on default inner ≈ 220
+  const phaseMaxWidth = Math.floor(inner * 0.75); // width cap to avoid overflow
 
   return (
     <div className="card fade-in relative overflow-hidden">
@@ -198,6 +236,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
       <div className="relative flex flex-col items-center justify-center">
         <ProgressRing progress={progress} size={ringSize} stroke={ringStroke} />
 
+        {/* Centred inner disc (clip) */}
         <div
           className="absolute rounded-full overflow-hidden"
           style={{ width: inner, height: inner, top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
@@ -205,10 +244,12 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
         >
           <div className="w-full h-full number-plate" />
 
+          {/* Glow: React-driven scale + opacity (with micro-breath during pauses) */}
           <div
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
             style={{ width: inner, height: inner, pointerEvents: "none" }}
           >
+            {/* Core */}
             <div
               className="absolute inset-0 rounded-full breath-core"
               style={{
@@ -217,6 +258,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
                 transition: "transform 90ms linear, opacity 120ms ease"
               }}
             />
+            {/* Halo */}
             <div
               className="absolute inset-0 rounded-full breath-halo"
               style={{
@@ -227,31 +269,65 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
             />
           </div>
 
+          {/* Breathing instruction – layers for word<->word cross-fade (1.6s) */}
           {isBreath && (topText || bottomText) && (
             <div className="absolute inset-0 flex items-center justify-center z-10">
               {topText && (
                 <span
-                  className={`phase-layer text-lg font-semibold drop-shadow-sm
-                             ${showTop ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"}`}
-                  style={{ transitionDelay: showTop ? "80ms" : "0ms" }}
+                  className={`phase-layer font-semibold drop-shadow-sm text-center`}
+                  style={{
+                    fontSize: `${phaseFontSize}px`,
+                    maxWidth: `${phaseMaxWidth}px`,
+                    lineHeight: 1,
+                    letterSpacing: "0.02em",
+                    ...(showTop
+                      ? { opacity: 1, transform: "translateY(0)" }
+                      : { opacity: 0, transform: "translateY(-4px)" })
+                  }}
                 >
                   {topText}
                 </span>
               )}
               {bottomText && (
                 <span
-                  className={`phase-layer text-lg font-semibold drop-shadow-sm
-                             ${showTop ? "opacity-0 -translate-y-1" : "opacity-100 translate-y-0"}`}
-                  style={{ transitionDelay: !showTop ? "80ms" : "0ms" }}
+                  className={`phase-layer font-semibold drop-shadow-sm text-center`}
+                  style={{
+                    fontSize: `${phaseFontSize}px`,
+                    maxWidth: `${phaseMaxWidth}px`,
+                    lineHeight: 1,
+                    letterSpacing: "0.02em",
+                    ...(!showTop
+                      ? { opacity: 1, transform: "translateY(0)" }
+                      : { opacity: 0, transform: "translateY(-4px)" })
+                  }}
                 >
                   {bottomText}
                 </span>
               )}
             </div>
           )}
+
+          {/* Long fade to nothing during pauses (3.2s) */}
+          {isBreath && !displayPhase && fadeOutText && (
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              <span
+                className="phase-to-null font-semibold drop-shadow-sm text-center"
+                style={{
+                  fontSize: `${phaseFontSize}px`,
+                  maxWidth: `${phaseMaxWidth}px`,
+                  lineHeight: 1,
+                  letterSpacing: "0.02em",
+                  opacity: 0,
+                  transform: "translateY(-6px)"
+                }}
+              >
+                {fadeOutText}
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Countdown time: glide up only during breath */}
+        {/* Countdown time: glide up only during breath (1.4s) — stable width box */}
         <div
           className={`absolute z-10 transition-all duration-[1400ms] ease-out
                       ${isBreath
