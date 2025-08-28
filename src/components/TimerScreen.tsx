@@ -7,6 +7,8 @@ import { useLocalStorage } from "../hooks/useLocalStorage";
 type Props = { ritual: Ritual; onExit: () => void };
 type JournalEntry = { id: string; ritualId: string; ritualName: string; endedAt: number; note?: string };
 
+const JOURNAL_KEY = "qf_journal_v1";
+
 export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const total = ritual.totalSeconds;
 
@@ -15,7 +17,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const [fineElapsed, setFineElapsed] = React.useState(0);
   const [running, setRunning] = React.useState(false);
 
-  const [journal, setJournal] = useLocalStorage<JournalEntry[]>("qf_journal_v1", []);
+  const [journal, setJournal] = useLocalStorage<JournalEntry[]>(JOURNAL_KEY, []);
   const [soundEnabled] = useLocalStorage<boolean>("qf_sound_enabled", true);
 
   const rafRef = React.useRef<number | null>(null);
@@ -88,7 +90,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const remaining = total - elapsed;
   const progress  = elapsed / total;
 
-  // ——— New breathing cycle with pauses ———
+  // ——— 15.5 s breathing cycle with pauses ———
   const isBreath = current.kind === "breath";
 
   // Phase durations (seconds)
@@ -176,14 +178,13 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
       if (last) {
         setFadeOutText(last);
         setFadeOutActive(false);
-        // trigger transition on next frame so it animates
         requestAnimationFrame(() => setFadeOutActive(true));
         if (fadeTimeout.current) window.clearTimeout(fadeTimeout.current);
         fadeTimeout.current = window.setTimeout(() => {
           setFadeOutText(null);
           setFadeOutActive(false);
           fadeTimeout.current = null;
-        }, 3300); // a hair over 3.2s to ensure completion
+        }, 3300); // ~3.2s
       }
       // clear layered words
       setTopText(null);
@@ -204,7 +205,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
     return () => clearTimeout(id);
   }, [displayPhase, showTop]);
 
-  // Complete → (optional) note → save → return to home
+  // --- Robust journal save: write to localStorage synchronously + state update ---
   const promptJournalAndExit = () => {
     const note = window.prompt("Ritual complete. Add a reflection? (optional)") ?? undefined;
     const entry: JournalEntry = {
@@ -214,7 +215,21 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
       endedAt: Date.now(),
       note: note && note.trim().length ? note : undefined
     };
-    setJournal(prev => [entry, ...prev]); // functional update for reliability
+
+    try {
+      // 1) read current from LS (defensive)
+      const raw = localStorage.getItem(JOURNAL_KEY);
+      const currentList: JournalEntry[] = raw ? JSON.parse(raw) : [];
+      const nextList = [entry, ...currentList];
+      // 2) write back synchronously so it persists even if we navigate immediately
+      localStorage.setItem(JOURNAL_KEY, JSON.stringify(nextList));
+      // 3) then update state so UI reflects it in-session too
+      setJournal(() => nextList);
+    } catch {
+      // as a fallback, still set state
+      setJournal(prev => [entry, ...prev]);
+    }
+
     onExit();
   };
 
@@ -224,9 +239,9 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
   const innerPad  = 16;
   const inner     = ringSize - ringStroke * 2 - innerPad;
 
-  // (We’re keeping your existing big type; no size tweaks yet)
-  const phaseFontSize = Math.floor(inner * 0.30);
-  const phaseMaxWidth = Math.floor(inner * 0.75);
+  // REVERT phase typography to smaller, balanced size (roughly “pre-increase” feel)
+  const phaseFontSize = Math.floor(inner * 0.16); // ~35px at inner≈220
+  const phaseMaxWidth = Math.floor(inner * 0.60);
 
   return (
     <div className="card fade-in relative overflow-hidden">
@@ -240,6 +255,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
       <div className="relative flex flex-col items-center justify-center">
         <ProgressRing progress={progress} size={ringSize} stroke={ringStroke} />
 
+        {/* Centred inner disc (clip) */}
         <div
           className="absolute rounded-full overflow-hidden"
           style={{ width: inner, height: inner, top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
@@ -279,7 +295,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
                   style={{
                     fontSize: `${phaseFontSize}px`,
                     maxWidth: `${phaseMaxWidth}px`,
-                    lineHeight: 1,
+                    lineHeight: 1.1,
                     letterSpacing: "0.02em",
                     ...(showTop
                       ? { opacity: 1, transform: "translateY(0)" }
@@ -295,7 +311,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
                   style={{
                     fontSize: `${phaseFontSize}px`,
                     maxWidth: `${phaseMaxWidth}px`,
-                    lineHeight: 1,
+                    lineHeight: 1.1,
                     letterSpacing: "0.02em",
                     ...(!showTop
                       ? { opacity: 1, transform: "translateY(0)" }
@@ -308,7 +324,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
             </div>
           )}
 
-          {/* Word → nothing (pause) long fade (now truly animated) */}
+          {/* Word → nothing (pause) long fade (animated) */}
           {isBreath && !displayPhase && fadeOutText && (
             <div className="absolute inset-0 flex items-center justify-center z-10">
               <span
@@ -316,7 +332,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit }) => {
                 style={{
                   fontSize: `${phaseFontSize}px`,
                   maxWidth: `${phaseMaxWidth}px`,
-                  lineHeight: 1,
+                  lineHeight: 1.1,
                   letterSpacing: "0.02em"
                 }}
               >
