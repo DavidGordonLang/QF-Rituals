@@ -97,16 +97,40 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit, onCompleteJournal
   const isBreathSection = current.kind === "breath";
   const breathType: BreathType | null = isBreathSection ? current.breathType : null;
 
-  // IMPORTANT: only activate breathing visuals once we're actually running
+  // only activate breathing visuals once we're actually running
   const breathActive = isBreathSection && running && sectionElapsedFine > 0.05;
 
-  const breath = React.useMemo(() => {
+  // Compute base breath state
+  const baseBreath = React.useMemo(() => {
     if (!breathActive || !breathType)
       return { phase: null as null | "Inhale" | "Hold" | "Exhale", scale: 0, glowOpacity: 0, cycleLength: 0 };
     return getBreathState(breathType, sectionElapsedFine);
   }, [breathActive, breathType, sectionElapsedFine]);
 
-  const displayPhase = breath.phase; // null during pauses
+  // Handle limited cycles (e.g., physioSigh ×3 then idle shimmer)
+  const breath = React.useMemo(() => {
+    if (!breathActive || !breathType) return baseBreath;
+
+    // if the section specifies exact cycles, respect them, then idle
+    const cycles = (current as any).cycles as number | undefined;
+    if (cycles && breathType === "physioSigh" && baseBreath.cycleLength > 0) {
+      const limit = cycles * baseBreath.cycleLength;
+      if (sectionElapsedFine >= limit) {
+        // idle shimmer: tiny, subtle pulse, no label
+        const t = sectionElapsedFine - limit;
+        const pulse = 0.02 * Math.sin((t / 1.2) * Math.PI * 2);
+        return {
+          phase: null,
+          scale: Math.max(0.10, 0.12 + pulse),
+          glowOpacity: 0.60 + 0.05 * Math.sin((t / 1.2) * Math.PI * 2),
+          cycleLength: baseBreath.cycleLength
+        };
+      }
+    }
+    return baseBreath;
+  }, [breathActive, breathType, baseBreath, current, sectionElapsedFine]);
+
+  const displayPhase = breath.phase; // null during pauses/idle
 
   // Word cross-fades (1.6s) and pause fade (3.2s)
   const [topText, setTopText]       = React.useState<string | null>(null);
@@ -258,7 +282,7 @@ export const TimerScreen: React.FC<Props> = ({ ritual, onExit, onCompleteJournal
             </div>
           )}
 
-          {/* Word → nothing during pauses (only when running) */}
+          {/* Word → nothing during pauses / idle shimmer (only when running) */}
           {breathActive && !displayPhase && (prevDisplay.current || fadeOutText) && (
             <div className="absolute inset-0 flex items-center justify-center z-10">
               <span
