@@ -4,6 +4,7 @@ export type BreathType =
   | "box_4_4_4_4"               // 4-4-4-4 box breathing
   | "fourSevenEight_pausedEnd"  // 4-7-8 with a pause after exhale
   | "resonant_5_5"              // 5.5/5.5 continuous
+  | "fourEight_continuous"      // 4-8 continuous (no holds)
   | "physioSigh";               // physiological sigh loop (double inhale + long exhale)
 
 export type BreathState = {
@@ -129,6 +130,15 @@ export function getBreathState(
 
     case "resonant_5_5": {
       const IN = 5.5, EX = 5.5, C = IN + EX;
+      t = ((t % C) + C) % C;
+
+      if (t < IN) return { phase: "Inhale", scale: lerp(MIN, MAX, t / IN), glowOpacity: 0.85, cycleLength: C };
+      t -= IN;
+      return { phase: "Exhale", scale: lerp(MAX, MIN, t / EX), glowOpacity: 0.85, cycleLength: C };
+    }
+
+    case "fourEight_continuous": {
+      const IN = 4, EX = 8, C = IN + EX;
       t = ((t % C) + C) % C;
 
       if (t < IN) return { phase: "Inhale", scale: lerp(MIN, MAX, t / IN), glowOpacity: 0.85, cycleLength: C };
