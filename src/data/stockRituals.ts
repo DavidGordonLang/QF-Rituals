@@ -1,7 +1,7 @@
 import type { BreathType } from "./breathLibrary";
 
 export type Section =
-  | { kind: "breath"; label: string; seconds: number; breathType: BreathType; cycles?: number }
+  | { kind: "breath"; label: string; seconds: number; breathType: BreathType; cycles?: number; prompts?: string[] }
   | { kind: "intention"; label: string; seconds: number; prompts?: string[] }
   | { kind: "posture"; label: string; seconds: number; prompts?: string[] }
   | { kind: "presence"; label: string; seconds: number; prompts?: string[] };
@@ -13,21 +13,17 @@ export type Ritual = {
   description: string;
   totalSeconds: number;
   sections: Section[];
-  journalPrompt?: string; // optional prompt shown on the Journal screen after completion
+  journalPrompt?: string;
 };
 
 const min = (n: number) => n * 60;
 
-// Shared posture lines (can be reused ad hoc)
-const SHARED_POSTURE = [
-  "Lift chin slowly on inhale. Stop where breath opens.",
-  "Soften jaw. Let the exhale fall naturally."
-];
+// ─────────────────────────────────────────────────────────────────────────────
+// QUIET FORGE — RITUALS (with upgraded rotating texts)
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const stockRituals: Ritual[] = [
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Morning Alignment (7 min)
-  // ─────────────────────────────────────────────────────────────────────────────
+  // 🌄 Morning Alignment — 7 min (420s)
   {
     id: "morning_alignment",
     name: "Morning Alignment",
@@ -36,16 +32,43 @@ export const stockRituals: Ritual[] = [
       "Begin the day grounded. Gentle breathwork followed by intent-setting to align mind and body.",
     totalSeconds: 7 * 60,
     sections: [
-      { kind: "intention", label: "Intention", seconds: 60 },
-      { kind: "breath", label: "Breathing", seconds: 300, breathType: "fourFourSix_paused" },
-      { kind: "presence", label: "Settle", seconds: 60, prompts: ["Settle your attention and breathe softly."] }
+      {
+        kind: "intention",
+        label: "Intention",
+        seconds: 60,
+        prompts: [
+          "Let your attention land on the breath. Nothing else is required right now.",
+          "Notice your body. Where does it feel ready? Where does it resist?",
+          "Choose one simple intent: something you can actually honour today."
+        ]
+      },
+      {
+        kind: "breath",
+        label: "Breathing",
+        seconds: 300,
+        breathType: "fourFourSix_paused",
+        prompts: [
+          "4-4-6: inhale soft for four, hold for four, exhale for six.",
+          "Let the breath open gently. Let the exhale lengthen you.",
+          "Each pause is a quiet gap — no tension, no rush.",
+          "Keep it simple. Four in, four still, six out."
+        ]
+      },
+      {
+        kind: "presence",
+        label: "Settle",
+        seconds: 60,
+        prompts: [
+          "Let attention rest lightly on your breath.",
+          "Find ease, even if it’s small. Stay there.",
+          "Nothing to fix—just breathe, and arrive."
+        ]
+      }
     ],
     journalPrompt: "What intention feels most alive now?"
   },
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Midday Reset (5 min) — Redesigned
-  // ─────────────────────────────────────────────────────────────────────────────
+  // 🌞 Midday Reset — 5 min (300s)
   {
     id: "midday_reset",
     name: "Midday Reset",
@@ -53,39 +76,56 @@ export const stockRituals: Ritual[] = [
     description: "Decompress, re-centre, and align posture and breath midway through the day.",
     totalSeconds: min(5),
     sections: [
-      // 1 min grounding breath (physio sigh ×3, then settle)
-      { kind: "breath", label: "Grounding Breath", seconds: 60, breathType: "physioSigh", cycles: 3 },
-      // 2 mins 4-4-6
-      { kind: "breath", label: "Regulate", seconds: 120, breathType: "fourFourSix_paused" },
-      // 1 min posture alignment
+      {
+        kind: "breath",
+        label: "Grounding Breath",
+        seconds: 60,
+        breathType: "physioSigh",
+        cycles: 3,
+        prompts: [
+          "Double inhale. Let it lift you. Long exhale, let it clear space.",
+          "Breathe in once, then again; release fully.",
+          "You are resetting in three breaths."
+        ]
+      },
+      {
+        kind: "breath",
+        label: "Regulate",
+        seconds: 120,
+        breathType: "fourFourSix_paused",
+        prompts: [
+          "4-4-6: inhale soft for four, hold for four, exhale for six.",
+          "Let each exhale clear a little more noise.",
+          "Rest in the pauses. Don’t fill them.",
+          "Breath sets the pace; follow gently."
+        ]
+      },
       {
         kind: "posture",
         label: "Alignment",
         seconds: 60,
         prompts: [
-          "Feet grounded.",
-          "Spine long.",
-          "Lift chin slowly on inhale. Find where breath opens.",
-          "Soften jaw. Let the breath fall out."
+          "Feet grounded. Hips loose. Knees soft.",
+          "Spine long. Let the breath rise up through it.",
+          "Lift your chin slowly as you inhale. Find where the airway opens.",
+          "Soften your jaw. Let the exhale drop naturally."
         ]
       },
-      // 1 min reset focus (intention)
       {
         kind: "intention",
         label: "Reset Focus",
         seconds: 60,
         prompts: [
-          "What are you returning to?",
-          "How do you want to show up next?"
+          "What deserves your focus now?",
+          "What’s ready to be re-entered with calm?",
+          "If urgency wasn’t in charge, what would you choose next?"
         ]
       }
     ],
     journalPrompt: "One thing now feels lighter?"
   },
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Stress Reset (3 min) — Redesigned
-  // ─────────────────────────────────────────────────────────────────────────────
+  // 🔻 Stress Reset — 3 min (180s)
   {
     id: "stress_reset",
     name: "Stress Reset",
@@ -93,75 +133,90 @@ export const stockRituals: Ritual[] = [
     description: "Fast nervous system reset for moments of overwhelm or tension spike.",
     totalSeconds: 3 * 60,
     sections: [
-      // 30 sec exhale-focus (mini physiological sigh loop)
-      { kind: "breath", label: "Exhale Focus", seconds: 30, breathType: "physioSigh" },
-      // 1 min physiological sigh cycles
-      { kind: "breath", label: "Cycle Release", seconds: 60, breathType: "physioSigh" },
-      // 30s posture discharge
+      {
+        kind: "breath",
+        label: "Exhale Focus",
+        seconds: 30,
+        breathType: "physioSigh",
+        prompts: [
+          "Each exhale lets go a little more.",
+          "Empty fully; clear space for calm."
+        ]
+      },
+      {
+        kind: "breath",
+        label: "Cycle Release",
+        seconds: 60,
+        breathType: "physioSigh",
+        prompts: [
+          "Inhale twice, release once. Let the system reset.",
+          "Double in, long out. Keep it simple."
+        ]
+      },
       {
         kind: "posture",
         label: "Discharge",
         seconds: 30,
         prompts: [
-          "Shrug shoulders high. Drop.",
-          "Tense fists. Release."
+          "Tense every muscle in your arms. Then let them fall limp.",
+          "Shrug your shoulders high. Exhale. Drop them heavily.",
+          "Press your tongue to the roof of your mouth. Hold. Let it relax."
         ]
       },
-      // 60s centring
       {
         kind: "presence",
         label: "Centring",
         seconds: 60,
         prompts: [
-          "Where are your feet?",
-          "Where is your breath?",
-          "Let the tension drain."
+          "Feel your feet pressing into the floor.",
+          "Track your next exhale all the way to the bottom.",
+          "You don’t need to fix anything. Just be here."
         ]
       }
     ],
     journalPrompt: "What shifted after the reset?"
   },
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Evening Integration (7 min) — Redesigned
-  // ─────────────────────────────────────────────────────────────────────────────
+  // 🌙 Evening Integration — 7 min (420s)
   {
     id: "evening_integration",
     name: "Evening Integration",
     guided: true,
     description: "Close the day with intention, breath, and reflection. Wind down the nervous system.",
-    totalSeconds: min(7), // 420s
+    totalSeconds: min(7),
     sections: [
-      // 1 min intention review
       {
         kind: "intention",
         label: "Review",
         seconds: 60,
         prompts: ["What mattered today?", "One win, one lesson."]
       },
-      // 3 mins 4-7-8 (with pause after exhale)
-      { kind: "breath", label: "Downshift", seconds: 180, breathType: "fourSevenEight_pausedEnd" },
-      // 2 mins journaling prompt (gentle fade text)
       {
-        kind: "presence",
-        label: "Journal Reflection",
-        seconds: 120,
-        prompts: ["If it helps: one win, one lesson, one thing for tomorrow."]
+        kind: "breath",
+        label: "Downshift",
+        seconds: 180,
+        breathType: "fourSevenEight_pausedEnd",
+        prompts: [
+          "4-7-8: inhale four, hold seven, exhale eight, pause.",
+          "Let the exhale slow everything down.",
+          "Pause after the exhale. Let the day end there."
+        ]
       },
-      // 1 min soft close
       {
         kind: "presence",
         label: "Soft Close",
-        seconds: 60,
-        prompts: ["Let the day soften. Breathe slowly."]
+        seconds: 180,
+        prompts: [
+          "Drop the day. There’s nothing left to fix.",
+          "Inhale calm. Exhale control.",
+          "Let the breath slow. That’s enough."
+        ]
       }
     ],
     journalPrompt: "One win, one lesson, and one thing to improve tomorrow."
   },
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Flow Trigger (5 min) — Redesigned
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ⚡ Flow Trigger — 5 min (300s)
   {
     id: "flow_trigger",
     name: "Flow Trigger",
@@ -169,39 +224,48 @@ export const stockRituals: Ritual[] = [
     description: "Activate clear focus, deep breath, and deliberate action. Enter with intention.",
     totalSeconds: min(5),
     sections: [
-      // 1 min grounding intention
       {
         kind: "intention",
         label: "Ground Focus",
         seconds: 60,
         prompts: ["One task. One breath.", "What matters most right now?"]
       },
-      // 2 mins resonant breathing (5.5 / 5.5)
-      { kind: "breath", label: "Resonant Breathing", seconds: 120, breathType: "resonant_5_5" },
-      // 1 min ready stance
+      {
+        kind: "breath",
+        label: "Resonant Breathing",
+        seconds: 120,
+        breathType: "resonant_5_5",
+        prompts: [
+          "Resonant: five and a half in, five and a half out.",
+          "Even breath, even focus.",
+          "Balance comes with rhythm."
+        ]
+      },
       {
         kind: "posture",
         label: "Ready Stance",
         seconds: 60,
         prompts: [
-          "Lift spine. Widen breath.",
-          "Lift chin as you breathe in. Find ease."
+          "Stack your spine. Widen your stance. Let stillness sharpen you.",
+          "Lift your chin as you breathe. Find where the air moves freely.",
+          "Drop your shoulders, not your intent."
         ]
       },
-      // 1 min widen awareness
       {
         kind: "presence",
         label: "Widen Awareness",
         seconds: 60,
-        prompts: ["Open your field. Let action emerge."]
+        prompts: [
+          "Widen your field of attention. Let background noise become atmosphere.",
+          "Feel your surroundings without naming them.",
+          "Don’t think. Just enter."
+        ]
       }
     ],
     journalPrompt: "What’s the one clear next step?"
   },
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Tactical Reset (90 sec) — Renamed & Refined (was Micro Check-ins)
-  // ─────────────────────────────────────────────────────────────────────────────
+  // 🛠️ Tactical Reset — 90s
   {
     id: "tactical_reset",
     name: "Tactical Reset",
@@ -209,7 +273,13 @@ export const stockRituals: Ritual[] = [
     description: "For quick redirection during distraction or mental clutter.",
     totalSeconds: 90,
     sections: [
-      { kind: "breath", label: "Reset Breaths", seconds: 25, breathType: "physioSigh" },
+      {
+        kind: "breath",
+        label: "Reset Breaths",
+        seconds: 25,
+        breathType: "physioSigh",
+        prompts: ["Three breaths can reset the system.", "Double inhale, long exhale."]
+      },
       {
         kind: "intention",
         label: "Refocus",
@@ -220,15 +290,13 @@ export const stockRituals: Ritual[] = [
         kind: "presence",
         label: "Return",
         seconds: 30,
-        prompts: ["Breathe softly. Begin again."]
+        prompts: ["Let the breath bring you back.", "No resistance. Just start.", "You’re already returning."]
       }
     ],
     journalPrompt: "One sentence: what matters now?"
   },
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Impulse Redirect (1 min) — Renamed & Refined
-  // ─────────────────────────────────────────────────────────────────────────────
+  // 🔁 Impulse Redirect — 1 min (60s)
   {
     id: "impulse_redirect",
     name: "Impulse Redirect",
@@ -252,15 +320,17 @@ export const stockRituals: Ritual[] = [
         kind: "presence",
         label: "Return",
         seconds: 20,
-        prompts: ["Let the pull fade. Come back by choice."]
+        prompts: [
+          "This is a rep. Every return is a rep.",
+          "The craving has a voice — but not authority.",
+          "You chose to come back. That matters."
+        ]
       }
     ],
     journalPrompt: "What did you notice, and how did you redirect?"
   },
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Threshold Reset (3 min) — New
-  // ─────────────────────────────────────────────────────────────────────────────
+  // 🚪 Threshold Reset — 3 min (180s)
   {
     id: "threshold_reset",
     name: "Threshold Reset",
@@ -268,30 +338,38 @@ export const stockRituals: Ritual[] = [
     description: "Use this when shifting environments, roles, or internal states.",
     totalSeconds: 180,
     sections: [
-      { kind: "breath", label: "Resonant Breathing", seconds: 60, breathType: "resonant_5_5" },
+      {
+        kind: "breath",
+        label: "Resonant Breathing",
+        seconds: 60,
+        breathType: "resonant_5_5",
+        prompts: ["Resonant: five and a half in, five and a half out.", "Breath steadies the shift."]
+      },
       {
         kind: "posture",
         label: "Alignment Check",
         seconds: 60,
         prompts: [
-          "Feet grounded.",
-          "Lift chin slowly. Find where breath opens.",
-          "Soften jaw. Let the exhale fall."
+          "Adjust your stance. Let breath guide alignment.",
+          "Feel where you’re tight. Let it go. Prepare to arrive.",
+          "You’re not carrying the last scene into this one."
         ]
       },
       {
         kind: "intention",
         label: "Role Shift",
         seconds: 60,
-        prompts: ["What role are you stepping into?", "What needs to be left behind?"]
+        prompts: [
+          "Who do you need to be next?",
+          "What can be left behind now — thought, posture, tone?",
+          "Step forward. Don’t drag the past with you."
+        ]
       }
     ],
     journalPrompt: "What role am I stepping into, and what did I leave behind?"
   },
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Rage Ritual (5 min) — New
-  // ─────────────────────────────────────────────────────────────────────────────
+  // 🔥 Rage Ritual — 5 min (300s)
   {
     id: "rage_ritual",
     name: "Rage Ritual",
@@ -299,16 +377,21 @@ export const stockRituals: Ritual[] = [
     description: "Use anger. Don’t waste it. Turn heat into fuel.",
     totalSeconds: min(5),
     sections: [
-      { kind: "breath", label: "Controlled Exhale", seconds: 60, breathType: "fourEight_continuous" },
+      {
+        kind: "breath",
+        label: "Controlled Exhale",
+        seconds: 60,
+        breathType: "fourEight_continuous",
+        prompts: [
+          "Four in, eight out. Long exhale is the vent.",
+          "Don’t suppress the heat. Just slow the flow."
+        ]
+      },
       {
         kind: "posture",
         label: "Discharge",
         seconds: 90,
-        prompts: [
-          "Tense fists. Hold. Release.",
-          "Shrug shoulders high. Drop.",
-          "Clench jaw. Then soften."
-        ]
+        prompts: ["Tense fists. Hold. Release.", "Shrug shoulders high. Drop.", "Clench jaw. Then soften."]
       },
       {
         kind: "intention",
@@ -320,23 +403,31 @@ export const stockRituals: Ritual[] = [
         kind: "presence",
         label: "Return to Purpose",
         seconds: 90,
-        prompts: ["Breathe deep. Anchor the energy."]
+        prompts: [
+          "You’re still in control. Even with the fire.",
+          "Let it move through — then direct it forward.",
+          "You don’t have to calm down. Just focus it."
+        ]
       }
     ],
     journalPrompt: "What did the anger reveal? What can I build with this energy?"
   },
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Return to Centre (9 min) — New
-  // ─────────────────────────────────────────────────────────────────────────────
+  // 🧭 Return to Centre — 9 min (540s)
   {
     id: "return_to_centre",
     name: "Return to Centre",
     guided: true,
     description: "A full recalibration. For days that fractured you or spirals you escaped.",
-    totalSeconds: 9 * 60, // 540s
+    totalSeconds: 9 * 60,
     sections: [
-      { kind: "breath", label: "Grounding Breath", seconds: 90, breathType: "fourFourSix_paused" },
+      {
+        kind: "breath",
+        label: "Grounding Breath",
+        seconds: 90,
+        breathType: "fourFourSix_paused",
+        prompts: ["4-4-6: soft in, hold, long out.", "Each cycle is a return."]
+      },
       {
         kind: "intention",
         label: "Self-Check",
@@ -348,21 +439,30 @@ export const stockRituals: Ritual[] = [
         label: "Stillness Reset",
         seconds: 90,
         prompts: [
-          "Lift crown. Spine soft.",
-          "Find the breath’s open point."
+          "Breathe into the soft space behind the heart.",
+          "Stillness isn’t absence. It’s presence without tension.",
+          "Find the shape of calm in your body and rest inside it."
         ]
       },
       {
         kind: "presence",
         label: "Vision Hold",
         seconds: 150,
-        prompts: ["Visualise your return.", "Feel the next action without forcing it."]
+        prompts: [
+          "See yourself in movement, not perfection.",
+          "Picture how you’ll return — tone, posture, pace.",
+          "Don’t rush clarity. Let it emerge."
+        ]
       },
       {
         kind: "presence",
         label: "Soft Close",
         seconds: 120,
-        prompts: ["Let clarity return. Begin gently."]
+        prompts: [
+          "The return has already begun.",
+          "Leave striving. Keep presence.",
+          "Let it be simple. Just begin."
+        ]
       }
     ],
     journalPrompt: "What needs reclaiming right now?"
