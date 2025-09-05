@@ -1,5 +1,6 @@
 import React from "react";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import { appendEchoSuiteEntry } from "../utils/echoStorage";
 
 export type JournalEntry = {
   id: string;
@@ -24,7 +25,8 @@ export default function JournalEditor({ entry, prompt, mode, onSave, onCancel }:
   const [note, setNote] = React.useState(entry.note ?? "");
 
   const save = () => {
-    const updated: JournalEntry = { ...entry, note: note.trim() ? note.trim() : undefined };
+    const trimmed = note.trim();
+    const updated: JournalEntry = { ...entry, note: trimmed ? trimmed : undefined };
 
     try {
       const raw = localStorage.getItem(KEY);
@@ -41,10 +43,20 @@ export default function JournalEditor({ entry, prompt, mode, onSave, onCancel }:
 
       localStorage.setItem(KEY, JSON.stringify(next));
       setList(next);
+
+      // 🔗 Append to the shared Echo Suite log ONLY when user actually saved text
+      if (updated.note) {
+        appendEchoSuiteEntry(updated.note);
+      }
     } catch {
+      // Local fallback
       setList((prev) =>
         mode === "edit" ? prev.map((it) => (it.id === updated.id ? updated : it)) : [updated, ...prev]
       );
+
+      if (updated.note) {
+        appendEchoSuiteEntry(updated.note);
+      }
     }
 
     onSave();
