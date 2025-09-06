@@ -1,4 +1,3 @@
-// src/utils/ritualJournal.ts
 import { appendEchoSuiteEntry } from "./echoStorage";
 
 export type RitualJournalItem = {
@@ -33,6 +32,8 @@ export function saveRitualJournal(ritualName: string, note: string) {
   // 3) SPECIAL CASE: Morning Alignment → feed Focus Forge
   try {
     if (ritualName === "Morning Alignment") {
+      console.log("⚡ Suite bridge triggered for Morning Alignment");
+
       const entry = {
         id: crypto.randomUUID(),
         at: now,
@@ -41,16 +42,15 @@ export function saveRitualJournal(ritualName: string, note: string) {
         source: "rituals",
       };
 
-      // Current intention
+      console.log("⚡ Writing suite.currentIntention", entry);
       localStorage.setItem("suite.currentIntention", JSON.stringify(entry));
 
-      // Intention history
       const rawInt = localStorage.getItem("suite.intentions");
       const intList = rawInt ? JSON.parse(rawInt) : [];
       intList.push(entry);
+      console.log("⚡ Writing suite.intentions", intList);
       localStorage.setItem("suite.intentions", JSON.stringify(intList));
 
-      // Add as a Focus task
       const task = {
         id: crypto.randomUUID(),
         title: note,
@@ -61,9 +61,10 @@ export function saveRitualJournal(ritualName: string, note: string) {
       const rawTasks = localStorage.getItem("suite.tasks");
       const tasks = rawTasks ? JSON.parse(rawTasks) : [];
       tasks.push(task);
+      console.log("⚡ Writing suite.tasks", tasks);
       localStorage.setItem("suite.tasks", JSON.stringify(tasks));
     }
   } catch (err) {
-    console.error("Suite bridge write failed from Rituals:", err);
+    console.error("🚨 Suite bridge write failed from Rituals:", err);
   }
 }
