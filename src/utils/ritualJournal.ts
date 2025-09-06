@@ -2,10 +2,10 @@
 import { appendEchoSuiteEntry } from "./echoStorage";
 
 export type RitualJournalItem = {
-  id: string;                 // local id for Rituals’ own list (not the suite id)
-  ritual: string;             // ritual name
-  note: string;               // user text
-  dateISO: string;            // timestamp
+  id: string;
+  ritual: string;
+  note: string;
+  dateISO: string;
 };
 
 const RITUALS_LOCAL_KEY = "rituals_journal";
@@ -13,26 +13,26 @@ const RITUALS_LOCAL_KEY = "rituals_journal";
 export function saveRitualJournal(ritualName: string, note: string) {
   const now = new Date().toISOString();
 
-  // 1) Save to Rituals’ own journal list (unchanged behavior)
+  // 1) Save locally (Rituals journal)
   const raw = localStorage.getItem(RITUALS_LOCAL_KEY);
   const arr = raw ? (JSON.parse(raw) as unknown) : [];
   const list: RitualJournalItem[] = Array.isArray(arr) ? (arr as RitualJournalItem[]) : [];
 
   list.push({
-    id: `local_${now}`,  // local-only id
+    id: `local_${now}`,
     ritual: ritualName,
     note,
-    dateISO: now
+    dateISO: now,
   });
 
   localStorage.setItem(RITUALS_LOCAL_KEY, JSON.stringify(list));
 
-  // 2) ALSO append to the shared Echo Suite log (critical for journaling continuity)
+  // 2) Append to Echo Suite journaling
   appendEchoSuiteEntry(note);
 
-  // 3) SPECIAL CASE: Morning Ritual → also feed Focus Forge
+  // 3) SPECIAL CASE: Morning Alignment → feed Focus Forge
   try {
-    if (ritualName.toLowerCase().includes("morning")) {
+    if (ritualName === "Morning Alignment") {
       const entry = {
         id: crypto.randomUUID(),
         at: now,
@@ -41,11 +41,8 @@ export function saveRitualJournal(ritualName: string, note: string) {
         source: "rituals",
       };
 
-      // Current intention (single)
-      localStorage.setItem(
-        "suite.currentIntention",
-        JSON.stringify(entry)
-      );
+      // Current intention
+      localStorage.setItem("suite.currentIntention", JSON.stringify(entry));
 
       // Intention history
       const rawInt = localStorage.getItem("suite.intentions");
