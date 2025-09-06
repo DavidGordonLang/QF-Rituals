@@ -12,7 +12,7 @@ const RITUALS_LOCAL_KEY = "rituals_journal";
 export function saveRitualJournal(ritualName: string, note: string) {
   const now = new Date().toISOString();
 
-  // 1) Save locally (Rituals journal)
+  // Local save
   const raw = localStorage.getItem(RITUALS_LOCAL_KEY);
   const arr = raw ? (JSON.parse(raw) as unknown) : [];
   const list: RitualJournalItem[] = Array.isArray(arr) ? (arr as RitualJournalItem[]) : [];
@@ -26,10 +26,8 @@ export function saveRitualJournal(ritualName: string, note: string) {
 
   localStorage.setItem(RITUALS_LOCAL_KEY, JSON.stringify(list));
 
-  // 2) Append to Echo Suite journaling
   appendEchoSuiteEntry(note);
 
-  // 3) SPECIAL CASE: Morning Alignment → feed Focus Forge
   try {
     if (ritualName === "Morning Alignment") {
       console.log("⚡ Suite bridge triggered for Morning Alignment");
@@ -68,3 +66,7 @@ export function saveRitualJournal(ritualName: string, note: string) {
     console.error("🚨 Suite bridge write failed from Rituals:", err);
   }
 }
+
+// ⬇️ DEBUG ONLY: expose to browser console so we can test instantly
+// After redeploy, you’ll be able to call saveRitualJournal("Morning Alignment", "Test") in DevTools.
+;(window as any).saveRitualJournal = saveRitualJournal;
