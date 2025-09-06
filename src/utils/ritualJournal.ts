@@ -27,6 +27,46 @@ export function saveRitualJournal(ritualName: string, note: string) {
 
   localStorage.setItem(RITUALS_LOCAL_KEY, JSON.stringify(list));
 
-  // 2) ALSO append to the shared Echo Suite log (critical)
+  // 2) ALSO append to the shared Echo Suite log (critical for journaling continuity)
   appendEchoSuiteEntry(note);
+
+  // 3) SPECIAL CASE: Morning Ritual → also feed Focus Forge
+  try {
+    if (ritualName.toLowerCase().includes("morning")) {
+      const entry = {
+        id: crypto.randomUUID(),
+        at: now,
+        text: note,
+        ritual: ritualName,
+        source: "rituals",
+      };
+
+      // Current intention (single)
+      localStorage.setItem(
+        "suite.currentIntention",
+        JSON.stringify(entry)
+      );
+
+      // Intention history
+      const rawInt = localStorage.getItem("suite.intentions");
+      const intList = rawInt ? JSON.parse(rawInt) : [];
+      intList.push(entry);
+      localStorage.setItem("suite.intentions", JSON.stringify(intList));
+
+      // Add as a Focus task
+      const task = {
+        id: crypto.randomUUID(),
+        title: note,
+        estimate: 1,
+        createdAt: now,
+        source: "rituals",
+      };
+      const rawTasks = localStorage.getItem("suite.tasks");
+      const tasks = rawTasks ? JSON.parse(rawTasks) : [];
+      tasks.push(task);
+      localStorage.setItem("suite.tasks", JSON.stringify(tasks));
+    }
+  } catch (err) {
+    console.error("Suite bridge write failed from Rituals:", err);
+  }
 }
