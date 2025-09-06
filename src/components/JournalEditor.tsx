@@ -1,87 +1,68 @@
 import React from "react";
-import { useLocalStorage } from "../hooks/useLocalStorage";
 import { appendEchoSuiteEntry } from "../utils/echoStorage";
 
 export type JournalEntry = {
   id: string;
-  ritualId: string;
-  ritualName: string;
-  endedAt: number;
-  note?: string;
+  ritualId?: string;
+  ritualName?: string;
+  note: string;
+  createdAt: number;
 };
 
 type Props = {
   entry: JournalEntry;
-  prompt?: string;
   mode: "new" | "edit";
+  prompt: string;
   onSave: () => void;
   onCancel: () => void;
 };
 
-const KEY = "qf_journal_v1";
+export default function JournalEditor({ entry, mode, prompt, onSave, onCancel }: Props) {
+  const [note, setNote] = React.useState(entry.note || "");
 
-export default function JournalEditor({ entry, prompt, mode, onSave, onCancel }: Props) {
-  const [list, setList] = useLocalStorage<JournalEntry[]>(KEY, []);
-  const [note, setNote] = React.useState(entry.note ?? "");
-
-  const save = () => {
-    const trimmed = note.trim();
-    const updated: JournalEntry = { ...entry, note: trimmed ? trimmed : undefined };
-
+  const handleSave = () => {
     try {
-      const raw = localStorage.getItem(KEY);
-      const cur: JournalEntry[] = raw ? JSON.parse(raw) : [];
+      const updated: JournalEntry = {
+        ...entry,
+        note,
+        createdAt: Date.now(),
+      };
 
-      let next: JournalEntry[];
-      if (mode === "edit") {
-        // replace in-place by id
-        next = cur.map((it) => (it.id === updated.id ? updated : it));
-      } else {
-        // prepend new
-        next = [updated, ...cur];
-      }
+      // Save to Echo + Suite (with ritual name if available)
+      appendEchoSuiteEntry(updated.note, updated.ritualName);
 
-      localStorage.setItem(KEY, JSON.stringify(next));
-      setList(next);
-
-      // 🔗 Append to the shared Echo Suite log ONLY when user actually saved text
-      if (updated.note) {
-        appendEchoSuiteEntry(updated.note);
-      }
-    } catch {
-      // Local fallback
-      setList((prev) =>
-        mode === "edit" ? prev.map((it) => (it.id === updated.id ? updated : it)) : [updated, ...prev]
-      );
-
-      if (updated.note) {
-        appendEchoSuiteEntry(updated.note);
-      }
+      // Call back to parent
+      onSave();
+    } catch (err) {
+      console.error("Journal save failed:", err);
     }
-
-    onSave();
   };
 
   return (
-    <div className="card fade-in">
-      <div className="mb-2 text-xs text-slate-300">{mode === "edit" ? "Edit entry" : "Journal"}</div>
-      <div className="text-xl font-semibold">{entry.ritualName}</div>
-      <div className="mt-2 text-sm opacity-80">
-        {prompt ?? (mode === "edit" ? "Edit your reflection." : "How did that feel?")}
+    <div className="space-y-3">
+      <div className="text-lg font-semibold">
+        {mode === "new" ? "New Reflection" : "Edit Reflection"}
       </div>
+      <div className="text-sm text-slate-300">{prompt}</div>
 
       <textarea
-        className="mt-4 w-full h-44 rounded-xl bg-white/10 border border-white/10 p-3 outline-none focus:border-white/20"
-        placeholder="Write a few lines (optional)…"
+        className="w-full min-h-[120px] p-3 border border-slate-600 rounded-lg bg-slate-900/40 text-slate-100"
         value={note}
         onChange={(e) => setNote(e.target.value)}
+        placeholder="Write your reflection here..."
       />
 
-      <div className="mt-4 flex gap-2 justify-end">
-        <button className="btn" onClick={onCancel}>
-          {mode === "edit" ? "Back" : "Skip"}
+      <div className="flex gap-3 justify-end">
+        <button
+          className="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600"
+          onClick={onCancel}
+        >
+          Cancel
         </button>
-        <button className="btn" onClick={save}>
+        <button
+          className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500"
+          onClick={handleSave}
+        >
           Save
         </button>
       </div>
