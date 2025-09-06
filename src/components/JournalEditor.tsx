@@ -6,7 +6,7 @@ export type JournalEntry = {
   ritualId?: string;
   ritualName?: string;
   note: string;
-  createdAt: number;
+  createdAt?: number;   // 🔑 made optional so it won’t break other imports
 };
 
 type Props = {
@@ -25,7 +25,7 @@ export default function JournalEditor({ entry, mode, prompt, onSave, onCancel }:
       const updated: JournalEntry = {
         ...entry,
         note,
-        createdAt: Date.now(),
+        createdAt: Date.now(),  // still populates it on save
       };
 
       // Save to Echo + Suite (with ritual name if available)
