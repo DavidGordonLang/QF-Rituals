@@ -44,9 +44,9 @@ export default function JournalEditor({ entry, prompt, mode, onSave, onCancel }:
       localStorage.setItem(KEY, JSON.stringify(next));
       setList(next);
 
-      // 🔗 Append to the shared Echo Suite log ONLY when user actually saved text
+      // 🔗 Append to Echo + Suite log (note + ritualName)
       if (updated.note) {
-        appendEchoSuiteEntry(updated.note);
+        appendEchoSuiteEntry(updated.note, updated.ritualName);
       }
     } catch {
       // Local fallback
@@ -55,7 +55,7 @@ export default function JournalEditor({ entry, prompt, mode, onSave, onCancel }:
       );
 
       if (updated.note) {
-        appendEchoSuiteEntry(updated.note);
+        appendEchoSuiteEntry(updated.note, updated.ritualName);
       }
     }
 
